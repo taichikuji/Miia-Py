@@ -3,7 +3,7 @@
 
 Miia is a bot written in Python, based on the snake girl ( or Lamia ) from the Anime and Manga Monster Musume.
 
-<img src="media/miia.webp" width="150px" style="margin-left: auto; margin-right: auto; display: block;" />
+<p align="center"><img src="media/miia.webp" width="150px" /></p>
 
 ## Why Python?
 
