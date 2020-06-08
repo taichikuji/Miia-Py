@@ -7,7 +7,10 @@ class shell(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="sh", hidden=True)
+    @commands.command(name="sh",
+                      hidden=True,
+                      brief="Load a command directly from the server's shell",
+                      description="Load a command directly from the server's shell -> ?sh <command: str>")
     @commands.is_owner()
     async def shell(self, ctx, *, command):
         output = subprocess.getoutput(command)
