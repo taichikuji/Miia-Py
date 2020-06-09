@@ -7,7 +7,10 @@ class loader(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="load", hidden=True)
+    @commands.command(name="load",
+                      hidden=False,
+                      brief="Load an extension",
+                      description="Load an extension -> ?load example.test")
     @commands.is_owner()
     async def load(self, ctx, *, extension):
         try:
@@ -25,7 +28,10 @@ class loader(commands.Cog):
             description = ":x: This module can't load because it doesn't have a setup function. Try adding it and load it again!"
         await ctx.send(description)
 
-    @commands.command(name="unload", hidden=True)
+    @commands.command(name="unload",
+                      hidden=False,
+                      brief="Unload an extension",
+                      description="Unload an extension -> ?unload example.test")
     @commands.is_owner()
     async def unload(self, ctx, *, extension):
         try:
@@ -35,7 +41,10 @@ class loader(commands.Cog):
             description = ":ok_hand: Don't worry about it. The module is already unloaded!"
         await ctx.send(description)
 
-    @commands.command(name="reload", hidden=True)
+    @commands.command(name="reload",
+                      hidden=False,
+                      brief="Reload an extension",
+                      description="Reload an extension -> ?reload example.test")
     @commands.is_owner()
     async def reload(self, ctx, *, extension):
         try:

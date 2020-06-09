@@ -3,7 +3,8 @@ import os
 import config
 from discord.ext import commands
 import glob
-# start the bot
+
+# start Miia
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('?'),
                    description='O-oi, what are you looking at?')
 
