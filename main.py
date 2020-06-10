@@ -36,14 +36,4 @@ async def on_ready():
     await bot.change_presence(activity=display)
 
 
-@commands.command(name="close",
-                  hidden=False,
-                  brief="Shutdown the bot")
-@commands.is_owner()
-# This closes the bot completely, be careful when executing it!
-# It is highly suggested that you create a systemd job that restarts the bot automatically
-async def close(self, ctx):
-    await ctx.send(":snake: Going to sleep!")
-    await ctx.bot.close()
-
 bot.run(config.token, bot=True, reconnect=True)
