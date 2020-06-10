@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import config
+from config import weatherstack_token
 import requests
 
 
@@ -15,7 +15,7 @@ class weather(commands.Cog):
     async def weather(self, ctx, *, city='Madrid'):
         # token comes from config.py file through the import config at the start of this file
         params = {
-            'access_key': config.weatherstack_token,
+            'access_key': weatherstack_token,
             'query': city
         }
         api_result = requests.get(
@@ -24,7 +24,7 @@ class weather(commands.Cog):
         ws = api_result.json()
         # creation of embed with all important WeatherStack's json info
         embed = discord.Embed(title="WeatherStack",
-                              description=f"Weather in **{ws['location']['name']}**", color=0xFF3351)
+                              description=f"Weather in **{ws['location']['name']}, {ws['location']['region']}**", color=0xFF3351)
         embed.set_thumbnail(url=f"{ws['current']['weather_icons'][0]}")
         embed.add_field(name="Temperature",
                         value=f"{ws['current']['temperature']}°C")

@@ -62,6 +62,16 @@ class loader(commands.Cog):
             description = ":x: This module can't load because it doesn't have a setup function. Try adding it and load it again!"
         await ctx.send(description)
 
+    @commands.command(name="close",
+                      hidden=False,
+                      brief="Shutdown the bot")
+    @commands.is_owner()
+    # This closes the bot completely, be careful when executing it!
+    # It is highly suggested that you create a systemd job that restarts the bot automatically
+    async def close(self, ctx):
+        await ctx.send(":snake: Going to sleep!")
+        await ctx.bot.close()
+
 
 def setup(bot):
     bot.add_cog(loader(bot))
