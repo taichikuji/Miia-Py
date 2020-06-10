@@ -8,7 +8,6 @@ class loader(commands.Cog):
         self.bot = bot
 
     @commands.command(name="load",
-                      hidden=False,
                       brief="Load an extension",
                       description="Load an extension -> ?load example.test")
     @commands.is_owner()
@@ -29,7 +28,6 @@ class loader(commands.Cog):
         await ctx.send(description)
 
     @commands.command(name="unload",
-                      hidden=False,
                       brief="Unload an extension",
                       description="Unload an extension -> ?unload example.test")
     @commands.is_owner()
@@ -42,7 +40,6 @@ class loader(commands.Cog):
         await ctx.send(description)
 
     @commands.command(name="reload",
-                      hidden=False,
                       brief="Reload an extension",
                       description="Reload an extension -> ?reload example.test")
     @commands.is_owner()
@@ -61,6 +58,16 @@ class loader(commands.Cog):
         except commands.NoEntryPointError:
             description = ":x: This module can't load because it doesn't have a setup function. Try adding it and load it again!"
         await ctx.send(description)
+
+    @commands.command(name="close",
+                      hidden=False,
+                      brief="Shutdown the bot")
+    @commands.is_owner()
+    # This closes the bot completely, be careful when executing it!
+    # It is highly suggested that you create a systemd job that restarts the bot automatically
+    async def close(self, ctx):
+        await ctx.send(":snake: Going to sleep!")
+        await ctx.bot.close()
 
 
 def setup(bot):

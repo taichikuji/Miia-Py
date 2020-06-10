@@ -7,7 +7,6 @@ class ping(commands.Cog):
         self.bot = bot
 
     @commands.command(name="ping",
-                      hidden=False,
                       brief="Show Miia's Latency")
     async def ping(self, ctx):
         embed = discord.Embed(color=0xFF3351)

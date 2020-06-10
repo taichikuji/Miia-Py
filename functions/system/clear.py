@@ -7,7 +7,6 @@ class clear(commands.Cog):
         self.bot = bot
 
     @commands.command(name="clear",
-                      hidden=False,
                       brief="Remove one or more messages",
                       description="Remove one or more messages -> ?clear <integer> (by default it's 2)")
     @commands.has_guild_permissions(manage_messages=True)
