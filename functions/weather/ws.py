@@ -9,7 +9,6 @@ class weather(commands.Cog):
         self.bot = bot
 
     @commands.command(name="weather",
-                      hidden=False,
                       brief="Retrieve information from WeatherStack's API",
                       description="Retrieve information from WeatherStack's API -> ?weather <string> (by default it's Madrid)")
     async def weather(self, ctx, *, city='Madrid'):
