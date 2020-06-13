@@ -1,1 +1,3 @@
 token = 'token'
+weatherstack_token = 'token'
+waifu_token = 'token'
