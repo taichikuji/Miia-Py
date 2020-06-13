@@ -3,24 +3,16 @@ import os
 import config
 from discord.ext import commands
 import glob
+import aiohttp
 
 # Starts Miia
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('?'),
                    description='O-oi, what are you looking at?')
 
-# Load modules
-# Takes 0.010036945343017578 seconds to load 2 modules
-# So it's commented out
-# for dirpath, dirs, files in os.walk('functions'):
-#     for functions in files:
-#         pyfile = os.path.join(dirpath, functions)
-#         if pyfile.endswith(".py"):
-#             module = pyfile.replace('.py', '').replace(os.sep, '.')
-#             bot.load_extension(module)
-#             print(f'Module {module} loaded!')
 
-# Takes 0.007251739501953125 seconds to load 2 modules
-# So it's being chosen as the best way to load modules on startup
+async def create_aiohttp_session(bot):
+    bot.session = aiohttp.ClientSession(loop=bot.loop)
+
 for functions in glob.iglob('functions/**/*.py', recursive=True):
     module = functions.replace('.py', '').replace(os.sep, '.')
     print(f'Loading module {module}')
@@ -33,6 +25,7 @@ async def on_ready():
     print(f'Miia Online! : {bot.user.name} - {bot.user.id}')
     display = discord.Activity(
         name="?help", type=discord.ActivityType.listening)
+    bot.loop.create_task(create_aiohttp_session(bot))
     await bot.change_presence(activity=display)
 
 

@@ -16,8 +16,7 @@ class shell(commands.Cog):
         output = subprocess.getoutput(command)
         if output is '':
             output = 'No output available'
-        embed = discord.Embed(color=0xFF3351)
-        embed.description = output
+        embed = discord.Embed(description=output, color=0xFF3351)
         await ctx.send(embed=embed)
 
     @shell.error

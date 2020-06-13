@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from config import weatherstack_token
-import requests
 
 
 class weather(commands.Cog):
@@ -12,15 +11,28 @@ class weather(commands.Cog):
                       brief="Retrieve information from WeatherStack's API",
                       description="Retrieve information from WeatherStack's API -> ?weather <string> (by default it's Madrid)")
     async def weather(self, ctx, *, city='Madrid'):
-        # token comes from config.py file through the import config at the start of this file
-        params = {
-            'access_key': weatherstack_token,
-            'query': city
-        }
-        api_result = requests.get(
-            'http://api.weatherstack.com/current', params)
-        # saves json into ws
-        ws = api_result.json()
+        async with ctx.typing():
+            # token comes from config.py file through the import config at the start of this file
+            params = {
+                'access_key': weatherstack_token,
+                'query': city
+            }
+            async with self.bot.session.get(
+                    'http://api.weatherstack.com/current', params=params) as api_result:
+
+                if api_result.status == 200:
+                    # returns api result
+                    stats_json = await api_result.json()
+                    embed = self.weather_embed(ctx, stats_json)
+                    await ctx.send(embed=embed)
+
+    def weather_embed(self, ctx, stats_json_array):
+        if stats_json_array is None or len(stats_json_array) == 0:
+            embed = discord.Embed(color=0xFF3351)
+            embed.description = ":x: Couldn't get it to work!"
+            return embed
+
+        ws = stats_json_array
         # creation of embed with all important WeatherStack's json info
         embed = discord.Embed(title="WeatherStack",
                               description=f"Weather in **{ws['location']['name']}, {ws['location']['region']}**", color=0xFF3351)
@@ -39,7 +51,7 @@ class weather(commands.Cog):
                         value=f"{ws['current']['wind_dir']}")
         embed.add_field(name="Local Time",
                         value=f"{ws['location']['localtime']}")
-        await ctx.send(embed=embed)
+        return embed
 
 
 def setup(bot):
