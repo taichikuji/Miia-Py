@@ -15,6 +15,7 @@ That will be released as a [Wiki](https://github.com/taichikuji/miia-py/wiki) in
 
 ### Dependencies
 
-- [Python 3: 3.6.9](https://www.python.org/download/releases/3.0/)
-- [Pipenv: 2020.6.2](https://github.com/pypa/pipenv)
-- [Discord.py: 1.4.0a](https://discordpy.readthedocs.io/en/latest/intro.html#installing)
+- [Python 3: 3.6.9](https://www.python.org/downloads/)
+- [Pipenv: 2020.6.2](https://pypi.org/project/pipenv/)
+- [Discord.py: 1.4.0a](https://pypi.org/project/discord.py/)
+- [Aiohttp: 3.6.2](https://pypi.org/project/aiohttp/)
