@@ -2,13 +2,13 @@ import discord
 from discord.ext import commands
 
 
-class clear(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="clear",
                       brief="Remove one or more messages",
-                      description="Remove one or more messages -> ?clear <integer> (by default it's 2)")
+                      description="Remove one or more messages previously, by default it removes 2 messages")
     @commands.has_guild_permissions(manage_messages=True)
     async def clear(self, ctx, amount=2):
         await ctx.channel.purge(limit=amount)
@@ -22,4 +22,4 @@ class clear(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(clear(bot))
+    bot.add_cog(miia(bot))

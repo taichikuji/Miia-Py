@@ -15,8 +15,8 @@ async def create_aiohttp_session(bot):
 
 for functions in glob.iglob('functions/**/*.py', recursive=True):
     module = functions.replace('.py', '').replace(os.sep, '.')
-    print(f'Loading module {module}')
     bot.load_extension(module)
+    print(f'Module {module} loaded')
 
 
 @bot.event

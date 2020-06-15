@@ -5,10 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 autopep8 = "*"
+pylint = "*"
 
 [packages]
 "discord.py" = {extras = ["voice"], version = "*"}
-requests = "*"
+aiohttp = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"

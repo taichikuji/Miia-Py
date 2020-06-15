@@ -2,12 +2,13 @@ import discord
 from discord.ext import commands
 
 
-class ping(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="ping",
-                      brief="Show Miia's Latency")
+                      brief="Show Miia's Latency",
+                      description="Show Miia's Latency in ms")
     async def ping(self, ctx):
         embed = discord.Embed(color=0xFF3351)
         latency = f'Latency: **{round(self.bot.latency * 1000)}** ms'
@@ -16,4 +17,4 @@ class ping(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(ping(bot))
+    bot.add_cog(miia(bot))

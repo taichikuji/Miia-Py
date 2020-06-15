@@ -3,13 +3,13 @@ from discord.ext import commands
 import discord
 
 
-class loader(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="load",
                       brief="Load an extension",
-                      description="Load an extension -> ?load example.test")
+                      description="Load an extension")
     @commands.is_owner()
     async def load(self, ctx, *, extension):
         try:
@@ -29,7 +29,7 @@ class loader(commands.Cog):
 
     @commands.command(name="unload",
                       brief="Unload an extension",
-                      description="Unload an extension -> ?unload example.test")
+                      description="Unload an extension")
     @commands.is_owner()
     async def unload(self, ctx, *, extension):
         try:
@@ -41,7 +41,7 @@ class loader(commands.Cog):
 
     @commands.command(name="reload",
                       brief="Reload an extension",
-                      description="Reload an extension -> ?reload example.test")
+                      description="Reload an extension")
     @commands.is_owner()
     async def reload(self, ctx, *, extension):
         try:
@@ -61,4 +61,4 @@ class loader(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(loader(bot))
+    bot.add_cog(miia(bot))
