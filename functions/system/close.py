@@ -15,6 +15,7 @@ class miia(commands.Cog):
     # It is highly suggested that you create a systemd job that restarts the bot automatically
     async def close(self, ctx):
         await ctx.send(":snake: Going to sleep!")
+        await ctx.bot.session.close()
         await ctx.bot.close()
 
 

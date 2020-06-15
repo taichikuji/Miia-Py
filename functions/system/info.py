@@ -1,7 +1,9 @@
 import discord
+import os
 from discord.ext import commands
 from platform import python_version, system, machine
 import aiohttp
+import psutil
 
 
 class miia(commands.Cog):
@@ -22,26 +24,35 @@ class miia(commands.Cog):
             "description": "Hello hello! I'm [Miia](https://github.com/taichikuji/Miia-Py). Here's some information regarding me and my dependencies!",
             "color": 0xFF3351,
             "thumbnail": {"url": str(self.bot.user.avatar_url)},
-            "fields": [{"name": "Versions",
-                        "value":
-                        f"**Python**: {python_version()}\n"
-                        f"**Miia-Py**: bruh\n"
-                        f"**Discord.py**: {discord.__version__}\n"
-                        f"**Aiohttp**: {aiohttp.__version__}"},
-                       {"name": "OS",
-                        "value": f"**{system()}**: {machine()}",
+            "fields": [{"name": "Bot version",
+                        "value": f"**Python**: {python_version()}\n"
+                                f"**Miia-Py**: 0.1.5\n",
                         "inline": True},
+                       {"name": "Dependencies",
+                        "value":
+                                f"**Discord.py**: {discord.__version__}\n"
+                                f"**Aiohttp**: {aiohttp.__version__}\n"
+                                f"**Psutil**: {psutil.__version__}",
+                        "inline": True},
+                       {"name": "OS",
+                        "value": f"**{system()}**: {machine()}"},
                        {"name": "Uptime",
                         "value": await self.uptime(),
                         "inline": True},
-                       {"name": "Average load",
-                        "value": await self.load(),
+                       {"name": "Memory",
+                        "value": await self._get_mem_usage(),
                         "inline": True}],
             "footer": {"text": f"Made by {self.bot.get_user(id=199632174603829249)}",
                        "icon_url": f"{self.bot.get_user(id=199632174603829249).avatar_url}"}
         }
         embed = discord.Embed.from_dict(em)
         return embed
+
+    @staticmethod
+    async def _get_mem_usage():
+        mem_usage = float(psutil.Process(
+            os.getpid()).memory_info().rss)/1000000
+        return str(round(mem_usage, 2)) + " MB"
 
     async def uptime(self):
         uptime = None
@@ -52,11 +63,6 @@ class miia(commands.Cog):
         uptime_minutes = (uptime % 3600) // 60
         uptime = f"{str(uptime_hours)} hours, {str(uptime_minutes)} minutes"
         return uptime
-
-    async def load(self):
-        with open("/proc/loadavg", "r") as f:
-            load = f.read().strip()
-        return load
 
 
 def setup(bot):

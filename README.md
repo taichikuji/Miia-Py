@@ -19,3 +19,4 @@ That will be released as a [Wiki](https://github.com/taichikuji/miia-py/wiki) in
 - [Pipenv: 2020.6.2](https://pypi.org/project/pipenv/)
 - [Discord.py: 1.4.0a](https://pypi.org/project/discord.py/)
 - [Aiohttp: 3.6.2](https://pypi.org/project/aiohttp/)
+- [Psutil: 5.7.0](https://pypi.org/project/psutil/)
