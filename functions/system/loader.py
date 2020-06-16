@@ -1,6 +1,5 @@
 from time import strftime, localtime, sleep
 from discord.ext import commands
-import discord
 
 
 class miia(commands.Cog):

@@ -1,9 +1,9 @@
 import discord
-import os
+from os import sep
 import config
 from discord.ext import commands
-import glob
-import aiohttp
+from glob import iglob
+from aiohttp import ClientSession
 
 
 class miiapy(commands.AutoShardedBot):
@@ -13,9 +13,10 @@ class miiapy(commands.AutoShardedBot):
                          fetch_offline_members=False)
         self.bot_token = config.token
         self.session = None
+        self.color = 0xFF3351
 
-        for functions in glob.iglob('functions/**/*.py', recursive=True):
-            module = functions.replace('.py', '').replace(os.sep, '.')
+        for functions in iglob('functions/**/*.py', recursive=True):
+            module = functions.replace('.py', '').replace(sep, '.')
             try:
                 self.load_extension(module)
                 print(f'Module {module} loaded')
@@ -23,7 +24,7 @@ class miiapy(commands.AutoShardedBot):
                 print(f'Failed to load {module}')
 
     async def create_aiohttp_session(self):
-        self.session = aiohttp.ClientSession(loop=self.loop)
+        self.session = ClientSession(loop=self.loop)
         # Created aiohttp ClientSession
 
     async def on_ready(self):

@@ -1,6 +1,6 @@
-import discord
+from discord import Embed
 from discord.ext import commands
-import subprocess
+from subprocess import getoutput
 
 
 class miia(commands.Cog):
@@ -8,15 +8,16 @@ class miia(commands.Cog):
         self.bot = bot
 
     @commands.command(name="sh",
+                      aliases=['shell', 'bash', 'zsh'],
                       hidden=True,
                       brief="Load a command",
                       description="Load a command directly from shell")
     @commands.is_owner()
     async def shell(self, ctx, *, command):
-        output = subprocess.getoutput(command)
+        output = getoutput(command)
         if output == '':
             output = 'No output available'
-        embed = discord.Embed(description=output, color=0xFF3351)
+        embed = Embed(description=output, color=self.bot.color)
         await ctx.send(embed=embed)
 
     @shell.error

@@ -1,7 +1,6 @@
-import discord
+from discord import Embed
 from discord.ext import commands
 from config import waifu_token
-import io
 
 
 class api(commands.Cog):
@@ -22,10 +21,10 @@ class api(commands.Cog):
                     em = {
                         "url": image_url,
                         "title": f"{ctx.author.name}'s Waifu2x image",
-                        "color": 0xFF3351,
+                        "color": self.bot.color,
                         "image": {"url": image_url}
                     }
-                    await ctx.send(embed=discord.Embed.from_dict(em))
+                    await ctx.send(embed=Embed.from_dict(em))
                 except:
                     await ctx.send(":x: Error handling the API")
                     return None

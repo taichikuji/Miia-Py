@@ -1,4 +1,4 @@
-import discord
+from discord import Embed
 from discord.ext import commands
 
 
@@ -11,7 +11,7 @@ class api(commands.Cog):
                       description="Show a random funny commit message from WhatTheCommit's site")
     async def commit(self, ctx):
         async with self.bot.session.get("http://whatthecommit.com/index.txt") as api_result:
-            embed = discord.Embed(description=(await api_result.text()), color=0xFF3351)
+            embed = Embed(description=(await api_result.text()), color=self.bot.color)
             await ctx.send(embed=embed)
 
 

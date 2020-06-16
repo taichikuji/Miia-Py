@@ -1,4 +1,4 @@
-import discord
+from discord import Embed
 from discord.ext import commands
 
 
@@ -10,7 +10,7 @@ class miia(commands.Cog):
                       brief="Show Miia's Latency",
                       description="Show Miia's Latency in ms")
     async def ping(self, ctx):
-        embed = discord.Embed(color=0xFF3351)
+        embed = Embed(color=self.bot.color)
         latency = f'Latency: **{round(self.bot.latency * 1000)}** ms'
         embed.description = latency
         await ctx.send(embed=embed)

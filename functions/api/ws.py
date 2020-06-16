@@ -1,4 +1,4 @@
-import discord
+from discord import Embed
 from discord.ext import commands
 from config import weatherstack_token
 
@@ -35,7 +35,7 @@ class api(commands.Cog):
             em = {
                 "title": "WeatherStack",
                 "description": f"Weather in **{ws['location']['name']}, {ws['location']['region']}**",
-                "color": 0xFF3351,
+                "color": self.bot.color,
                 "thumbnail": {"url": f"{ws['current']['weather_icons'][0]}"},
                 "fields": [{"name": "Temperature",
                             "value": f"{ws['current']['temperature']}°C",
@@ -58,10 +58,10 @@ class api(commands.Cog):
                            {"name": "Local Time",
                             "value": f"{ws['location']['localtime']}"}]
             }
-            embed = discord.Embed.from_dict(em)
+            embed = Embed.from_dict(em)
             return embed
         except KeyError as error:
-            embed = discord.Embed(color=0xFF3351)
+            embed = Embed(color=self.bot.color)
             embed.description = f""":x: Error handling the API
                                 Value {error} wasn't found or is incorrect"""
             return embed

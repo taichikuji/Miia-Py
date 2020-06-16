@@ -1,5 +1,5 @@
 import discord
-import os
+from os import getpid
 from discord.ext import commands
 from platform import python_version, system, machine
 import aiohttp
@@ -22,7 +22,7 @@ class miia(commands.Cog):
         em = {
             "title": "Bot's info",
             "description": "Hello hello! I'm [Miia](https://github.com/taichikuji/Miia-Py). Here's some information regarding me and my dependencies!",
-            "color": 0xFF3351,
+            "color": self.bot.color,
             "thumbnail": {"url": str(self.bot.user.avatar_url)},
             "fields": [{"name": "Bot version",
                         "value": f"**Python**: {python_version()}\n"
@@ -51,7 +51,7 @@ class miia(commands.Cog):
     @staticmethod
     async def _get_mem_usage():
         mem_usage = float(psutil.Process(
-            os.getpid()).memory_info().rss)/1000000
+            getpid()).memory_info().rss)/1000000
         return str(round(mem_usage, 2)) + " MB"
 
     async def uptime(self):
