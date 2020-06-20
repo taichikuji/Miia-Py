@@ -11,7 +11,7 @@ pylint = "*"
 "discord.py" = {extras = ["voice"], version = "*"}
 aiohttp = "*"
 psutil = "*"
-discord-ext-menus = {editable = true, git = "https://github.com/Rapptz/discord-ext-menus"}
+discord-ext-menus = {git = "https://github.com/Rapptz/discord-ext-menus.git", ref = "master"}
 
 [requires]
 python_version = "3.8"

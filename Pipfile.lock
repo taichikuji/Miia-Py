@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9afa1bf8882bc497d6b4bff5e55260e21404c3c43bafdcf363d89d3ed8e82b7c"
+            "sha256": "3650f31e7000b1802dd6ee3dfb8eadb117de8012d1a69f31ea21df2712abf506"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -91,8 +91,7 @@
             "version": "==3.0.4"
         },
         "discord-ext-menus": {
-            "editable": true,
-            "git": "https://github.com/Rapptz/discord-ext-menus",
+            "git": "https://github.com/Rapptz/discord-ext-menus.git",
             "ref": "d9965ecbe2dba46c2b41cc9fd14aaa556841c183"
         },
         "discord.py": {
