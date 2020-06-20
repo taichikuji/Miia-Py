@@ -13,10 +13,13 @@ Mainly to learn Python a bit more and... After trying it for a few days, it's su
 
 That will be released as a [Wiki](https://github.com/taichikuji/miia-py/wiki) in the near future. Hold tight!
 
-### Dependencies
+## Dependencies
 
 - [Python 3: 3.8.3](https://www.python.org/downloads/)
 - [Pipenv: 2020.6.2](https://pypi.org/project/pipenv/)
+### Dependencies installed with pipenv
 - [Discord.py: 1.4.0a](https://pypi.org/project/discord.py/)
 - [Aiohttp: 3.6.2](https://pypi.org/project/aiohttp/)
 - [Psutil: 5.7.0](https://pypi.org/project/psutil/)
+### Dependencies installed with pip using this [method](https://github.com/taichikuji/Miia-Py/wiki/Installing-with-Pip-inside-your-pipenv-project)
+- [Discord-ext-menus: ](https://github.com/Rapptz/discord-ext-menus)

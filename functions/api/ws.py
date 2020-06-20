@@ -34,29 +34,21 @@ class api(commands.Cog):
             # creation of embed with all important WeatherStack's json info
             em = {
                 "title": "WeatherStack",
-                "description": f"Weather in **{ws['location']['name']}, {ws['location']['region']}**",
+                "description": f"Weather in **{ws['location']['name']}**, **{ws['location']['region']}**\n**{ws['current']['weather_descriptions'][0]}**",
                 "color": self.bot.color,
                 "thumbnail": {"url": f"{ws['current']['weather_icons'][0]}"},
                 "fields": [{"name": "Temperature",
-                            "value": f"{ws['current']['temperature']}°C",
-                            "inline": True},
-                           {"name": "Feels like",
-                            "value": f"{ws['current']['temperature']}°C",
-                            "inline": True},
-                           {"name": "Weather Description",
-                            "value": f"{ws['current']['weather_descriptions'][0]}",
+                            "value": f"**{ws['current']['temperature']}°C**, feels like **{ws['current']['temperature']}°C**",
                             "inline": True},
                            {"name": "Humidity",
                             "value": f"{ws['current']['humidity']}%",
                             "inline": True},
-                           {"name": "Wind Speed",
+                           {"name": "Wind",
                             "value": f"{ws['current']['wind_speed']} kph",
                             "inline": True},
                            {"name": "Wind Direction",
                             "value": f"{ws['current']['wind_dir']}",
-                            "inline": True},
-                           {"name": "Local Time",
-                            "value": f"{ws['location']['localtime']}"}]
+                            "inline": True}]
             }
             embed = Embed.from_dict(em)
             return embed

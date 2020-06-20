@@ -1,0 +1,6 @@
+version: "3.8"
+services:
+  bot:
+    build: ./
+    restart: always
+    container_name: discord-miia
