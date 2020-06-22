@@ -21,7 +21,7 @@ class miia(commands.Cog):
         # creation of embed with all important info
         em = {
             "title": "Bot's info",
-            "description": "Hello hello! I'm [Miia](https://github.com/taichikuji/Miia-Py). Here's some information regarding me and my dependencies!",
+            "description": "Oh, you wanna know more about me? I'm [Miia](https://github.com/taichikuji/Miia-Py). Here's some information regarding me and my dependencies!",
             "color": self.bot.color,
             "thumbnail": {"url": str(self.bot.user.avatar_url)},
             "fields": [{"name": "Bot version",
