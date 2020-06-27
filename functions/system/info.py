@@ -26,7 +26,7 @@ class miia(commands.Cog):
             "thumbnail": {"url": str(self.bot.user.avatar_url)},
             "fields": [{"name": "Bot version",
                         "value": f"**Python**: {python_version()}\n"
-                                f"**Miia-Py**: 0.1.5\n",
+                                f"**Miia-Py**: 0.1.6\n",
                         "inline": True},
                        {"name": "Dependencies",
                         "value":
