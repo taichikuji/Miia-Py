@@ -3,6 +3,7 @@ from discord.ext.commands import Cog
 from utils.paginator import Paginator
 from discord import Embed
 from typing import Dict, List, Set
+from re import finditer
 
 
 class api(Cog):
@@ -34,6 +35,7 @@ class api(Cog):
         for data in response:
             readings: Set[str] = set()
             words: Set[str] = set()
+            kanji_link: Set[str] = set()
 
             for kanji in data['japanese']:
                 reading: str = kanji.get('reading')
@@ -43,6 +45,13 @@ class api(Cog):
 
                 if word and word not in words:
                     words.add(word)
+
+            for word in words:
+                for res in finditer('[一-龯]', word):
+                    if res and res not in kanji_link:
+                        res = f'[{res.group(0)}](https://jisho.org/search/{res.group(0)}%23kanji)'
+                        kanji_link.add(res)
+
             senses: Dict[str, List[str]] = {
                 'english': [],
                 'parts_of_speech': []
@@ -60,7 +69,7 @@ class api(Cog):
                 pass
 
             result = {'readings': list(
-                readings), 'words': list(words), **senses}
+                readings), 'words': list(words), 'kanji': list(kanji_link), **senses}
             results.append(result)
         return self.jisho_embed(keyword, results)
 
@@ -81,6 +90,9 @@ class api(Cog):
                 "fields": [{
                     "name": "Words",
                     "value": res['words']
+                }, {
+                    "name": "Kanji",
+                    "value": res['kanji']
                 }, {
                     "name": "Readings",
                     "value": res['readings']
