@@ -9,8 +9,8 @@ class api(commands.Cog):
         self.bot = bot
 
     @commands.command(name="weather",
-                      brief="Retrieve information from WeatherStack's API",
-                      description="Retrieve weather information from WeatherStack's API, the default value for city is Madrid")
+                      brief="Retrieve information from OpenWeatherMap's API",
+                      description="Retrieve weather information from OpenWeatherMap's API, the default value for city is Madrid")
     async def weather(self, ctx, *args):
         async with ctx.typing():
             unit, values = self.unit_value(args)
@@ -95,7 +95,7 @@ class api(commands.Cog):
     def weather_embed(self, stats_json_array, icon, unit):
         try:
             ws = stats_json_array
-            # creation of embed with all important WeatherStack's json info
+            # creation of embed with all important OpenWeatherMap's json info
             em = {
                 "title": f"Weather in **{ws['name']}**, **{ws['sys']['country']}**",
                 "description": f"{icon} {ws['weather'][0]['main']}, {ws['weather'][0]['description']}",

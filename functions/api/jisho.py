@@ -30,6 +30,13 @@ class api(Cog):
                     await ctx.send(":x: Error handling the API")
                     return None
 
+    @jisho_.error
+    async def run_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(f"You need to input an argument, {ctx.author.mention}!")
+        else:
+            raise error
+
     def _parse(self, keyword,  response=[]):
         results = []
         for data in response:

@@ -27,4 +27,5 @@ That will be released as a [Wiki](https://github.com/taichikuji/miia-py/wiki) in
 - <a href="https://pypi.org/project/discord.py/"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/discord.py/master"/></a>
 - <a href="https://pypi.org/project/aiohttp/"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/aiohttp/master"/></a>
 - <a href="https://pypi.org/project/psutil/"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/psutil/master"/></a>
-- <a href="https://pypi.org/project/psutil/"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/discord-ext-menus/master"/></a>
+- <a href="https://pypi.org/project/praw/"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/praw/master"/></a>
+- <a href="https://github.com/Rapptz/discord-ext-menus"><img src="https://img.shields.io/github/pipenv/locked/dependency-version/taichikuji/Miia-Py/discord-ext-menus/master"/></a>
