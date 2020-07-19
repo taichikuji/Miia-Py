@@ -1,3 +1,5 @@
 token = 'token'
 openweather_token = 'token'
 waifu_token = 'token'
+reddit_id = 'token'
+reddit_token = 'token'

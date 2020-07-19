@@ -11,7 +11,7 @@ class api(commands.Cog):
     @commands.command(name="weather",
                       brief="Retrieve information from OpenWeatherMap's API",
                       description="Retrieve weather information from OpenWeatherMap's API, the default value for city is Madrid")
-    async def weather(self, ctx, *args):
+    async def weather(self, ctx, *args: str):
         async with ctx.typing():
             unit, values = self.unit_value(args)
             # token comes from config.py file through the import config at the start of this file
@@ -33,6 +33,7 @@ class api(commands.Cog):
                     return None
 
     def unit_value(self, args):
+        # Tries to get optional values like fahrenheit or celsius for proper measurement
         if args:
             if args[0] in ['f', 'fahrenheit', 'imperial']:
                 unit = {
@@ -73,6 +74,7 @@ class api(commands.Cog):
         return unit, params
 
     def icon(self, stats_json_array):
+        # Depending on the icon that it receives, it puts one emoji or another
         icon = stats_json_array['weather'][0]['icon']
         if icon == '01d':
             icon = '☀️'

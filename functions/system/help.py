@@ -34,7 +34,7 @@ class HelpMenu(ListPageSource):
             "description": "Uh... Yes! I'll do my best! Here are the commands",
             "color": self.ctx.bot.color,
             "thumbnail": {"url": str(self.ctx.guild.me.avatar_url)},
-            "footer": {"text": f"{offset:,} - {min(len_data, offset+self.per_page-1):,} of {len_data} commands."},
+            "footer": {"text": f"Page {offset:,} - {min(len_data, offset+self.per_page-1):,}/{len_data}"},
             "fields": []
         }
         for name, value in fields:
