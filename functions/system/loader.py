@@ -8,7 +8,8 @@ class miia(commands.Cog):
 
     @commands.command(name="load",
                       brief="Load an extension",
-                      description="Load an extension")
+                      description="Load an extension",
+                      usage="`load <folder.file>`")
     @commands.is_owner()
     async def load(self, ctx, *, extension):
         try:
@@ -28,7 +29,8 @@ class miia(commands.Cog):
 
     @commands.command(name="unload",
                       brief="Unload an extension",
-                      description="Unload an extension")
+                      description="Unload an extension",
+                      usage="`unload <folder.file>`")
     @commands.is_owner()
     async def unload(self, ctx, *, extension):
         try:
@@ -40,7 +42,8 @@ class miia(commands.Cog):
 
     @commands.command(name="reload",
                       brief="Reload an extension",
-                      description="Reload an extension")
+                      description="Reload an extension",
+                      usage="`reload <folder.file>`")
     @commands.is_owner()
     async def reload(self, ctx, *, extension):
         try:

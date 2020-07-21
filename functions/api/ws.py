@@ -10,7 +10,8 @@ class api(commands.Cog):
 
     @commands.command(name="weather",
                       brief="Retrieve information from OpenWeatherMap's API",
-                      description="Retrieve weather information from OpenWeatherMap's API, the default value for city is Madrid")
+                      description="Retrieve weather information from OpenWeatherMap's API, the default value for city is Madrid",
+                      usage="`weather ( f | fahrenheit | c | celsius ) <city>`")
     async def weather(self, ctx, *args: str):
         async with ctx.typing():
             unit, values = self.unit_value(args)

@@ -11,7 +11,8 @@ class miia(commands.Cog):
                       aliases=['shell', 'bash', 'zsh'],
                       hidden=True,
                       brief="Load a command",
-                      description="Load a command directly from shell")
+                      description="Load a command directly from shell",
+                      usage="`sh | shell | bash | zsh <command>`")
     @commands.is_owner()
     async def shell(self, ctx, *, command):
         output = getoutput(command)

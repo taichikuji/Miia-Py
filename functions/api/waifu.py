@@ -9,7 +9,8 @@ class api(commands.Cog):
 
     @commands.command(name="waifu",
                       brief="Enlarge and enchance an image!",
-                      description="Enlarge and enchance an image using DeepAI's API. Resolution is limited to 1600p.")
+                      description="Enlarge and enchance an image using DeepAI's API. Resolution is limited to 1600p.",
+                      usage="`waifu <url> | <embedded image> | <previous url> | <previous embedded image>`")
     async def waifu(self, ctx, *, image=None):
         async with ctx.typing():
             # token comes from config.py file through the import config at the start of this file

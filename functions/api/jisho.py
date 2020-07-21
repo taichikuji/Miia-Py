@@ -13,7 +13,8 @@ class api(Cog):
 
     @commands.command(name="jisho",
                       brief="Search a term on Jisho's dictionary",
-                      description="Search a term in both English and Japanese using Jisho's dictionary")
+                      description="Search a term in both English and Japanese using Jisho's dictionary",
+                      usage="`jisho <keyword>`")
     async def jisho_(self, ctx, *, keyword: str):
         async with ctx.typing():
             params = {

@@ -36,8 +36,10 @@ class api(commands.Cog):
     #                     return None
 
     @commands.command(name="reddit",
-                      brief="reddit example",
-                      description="reddit example's command using praw")
+                      brief="Shows a list of posts from a subreddit",
+                      description="Shows a list of posts from a subreddit, with pagination!",
+                      usage="`reddit <subreddit>`\n"
+                      "`reddit ( s | shuffle | r | rising ) <subreddit>`")
     async def rpost(self, ctx, *args: str):
         async with ctx.channel.typing():
             if self.reddit and args:
@@ -87,7 +89,8 @@ class api(commands.Cog):
                 if self.is_image(submission):
                     em = {
                         "title": f"{submission.title}",
-                        "url": submission.url
+                        "url": submission.url,
+                        "permalink": submission.permalink
                     }
                     results.append(em)
 
@@ -101,7 +104,7 @@ class api(commands.Cog):
         for start, values in enumerate(results, 1):
             em = {
                 "title": values['title'],
-                "url": values['url'],
+                "url": f"https://reddit.com{values['permalink']}",
                 "color": self.bot.color,
                 "image": {"url": values['url']},
                 "footer": {"text": f"Page {start}/{size}"}

@@ -12,7 +12,8 @@ class miia(commands.Cog):
 
     @commands.command(name="info",
                       brief="Show information about the bot",
-                      description="Show information about the bot, versions of dependencies, uptime or memory usage of the bot!")
+                      description="Show information about the bot, versions of dependencies, uptime or memory usage of the bot!",
+                      usage="`info`")
     async def info(self, ctx):
         embed = await self.create_embed(ctx)
         await ctx.send(embed=embed)

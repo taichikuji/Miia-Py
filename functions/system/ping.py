@@ -8,7 +8,8 @@ class miia(commands.Cog):
 
     @commands.command(name="ping",
                       brief="Show Miia's Latency",
-                      description="Show Miia's Latency in ms")
+                      description="Show Miia's Latency in ms",
+                      usage="`ping`")
     async def ping(self, ctx):
         embed = Embed(color=self.bot.color)
         latency = f'Latency: **{round(self.bot.latency * 1000)}** ms'

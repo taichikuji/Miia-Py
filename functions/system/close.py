@@ -8,7 +8,8 @@ class miia(commands.Cog):
     @commands.command(name="close",
                       aliases=['shutdown', 'sleep'],
                       brief="Shutdown the bot",
-                      description="Shutdown the bot, if it has a systemd job that always restarts the process, it will restart")
+                      description="Shutdown the bot, if it has a systemd job that always restarts the process, it will restart",
+                      usage="`close | shutdown | sleep`")
     @commands.is_owner()
     # This closes the bot completely, be careful when executing it!
     # It is highly suggested that you create a systemd job that restarts the bot automatically

@@ -65,12 +65,17 @@ class Help(Cog):
             "description": syntax(command),
             "color": self.bot.color,
             "fields": [{"name": "Command description",
-                        "value": f"{command.help}"}]
+                        "value": f"{command.description}"},
+                       {"name": "Command usage",
+                        "value": f"{command.usage}"}]
         }
         embed = Embed.from_dict(em)
         await ctx.send(embed=embed)
 
-    @command(name="help")
+    @command(name="help",
+             brief="Shows a list of the available commands",
+             description="Shows a list of the available commands, a brief description and the parameters!",
+             usage="`help ( <command> )`")
     async def show_help(self, ctx, cmd: Optional[str]):
         if cmd is None:
             menu = MenuPages(source=HelpMenu(
