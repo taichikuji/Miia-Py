@@ -10,7 +10,7 @@ class miiapy(commands.AutoShardedBot):
     def __init__(self):
         super().__init__(command_prefix=commands.when_mentioned_or('?'),
                          description='O-oi, what are you looking at?',
-                         fetch_offline_members=False)
+                         fetch_offline_members=False, case_insensitive=True)
         self.bot_token = config.token
         self.session = None
         self.color = 0xFF3351

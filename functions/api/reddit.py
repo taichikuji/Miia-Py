@@ -36,10 +36,11 @@ class api(commands.Cog):
     #                     return None
 
     @commands.command(name="reddit",
+                      aliases=['r'],
                       brief="Shows a list of posts from a subreddit",
                       description="Shows a list of posts from a subreddit, with pagination!",
                       usage="`reddit <subreddit>`\n"
-                      "`reddit ( s | shuffle | r | rising ) <subreddit>`")
+                      "`r | reddit ( s | shuffle | r | rising ) <subreddit>`")
     async def rpost(self, ctx, *args: str):
         async with ctx.channel.typing():
             if self.reddit and args:
