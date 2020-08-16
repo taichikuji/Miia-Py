@@ -1,9 +1,8 @@
-import discord
+from discord import Embed
 from os import getpid
 from discord.ext import commands
 from platform import python_version, system, machine
-import aiohttp
-import psutil
+from psutil import Process
 
 
 class miia(commands.Cog):
@@ -27,13 +26,7 @@ class miia(commands.Cog):
             "thumbnail": {"url": str(self.bot.user.avatar_url)},
             "fields": [{"name": "Bot version",
                         "value": f"**Python**: {python_version()}\n"
-                                f"**Miia-Py**: 0.1.7\n",
-                        "inline": True},
-                       {"name": "Dependencies",
-                        "value":
-                                f"**Discord.py**: {discord.__version__}\n"
-                                f"**Aiohttp**: {aiohttp.__version__}\n"
-                                f"**Psutil**: {psutil.__version__}",
+                                f"**Miia-Py**: 0.1.8\n",
                         "inline": True},
                        {"name": "OS",
                         "value": f"**{system()}**: {machine()}"},
@@ -46,12 +39,12 @@ class miia(commands.Cog):
             "footer": {"text": f"Made by {self.bot.get_user(id=199632174603829249)}",
                        "icon_url": f"{self.bot.get_user(id=199632174603829249).avatar_url}"}
         }
-        embed = discord.Embed.from_dict(em)
+        embed = Embed.from_dict(em)
         return embed
 
     @staticmethod
     async def _get_mem_usage():
-        mem_usage = float(psutil.Process(
+        mem_usage = float(Process(
             getpid()).memory_info().rss)/1000000
         return str(round(mem_usage, 2)) + " MB"
 

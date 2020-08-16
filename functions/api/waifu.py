@@ -1,6 +1,6 @@
 from discord import Embed
 from discord.ext import commands
-from config import waifu_token
+from config import WAIFU_TOKEN
 
 
 class api(commands.Cog):
@@ -15,7 +15,7 @@ class api(commands.Cog):
         async with ctx.typing():
             # token comes from config.py file through the import config at the start of this file
             image_url = await self.get_img(ctx, image=image)
-            async with self.bot.session.post("https://api.deepai.org/api/waifu2x", data={'image': image_url}, headers={'api-key': waifu_token}) as api_result:
+            async with self.bot.session.post("https://api.deepai.org/api/waifu2x", data={'image': image_url}, headers={'api-key': WAIFU_TOKEN}) as api_result:
                 try:
                     # returns api result
                     image_url = (await api_result.json())['output_url']

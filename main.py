@@ -11,7 +11,7 @@ class miiapy(commands.AutoShardedBot):
         super().__init__(command_prefix=commands.when_mentioned_or('?'),
                          description='O-oi, what are you looking at?',
                          fetch_offline_members=False, case_insensitive=True)
-        self.bot_token = config.token
+        self.BOT_TOKEN = config.TOKEN
         self.session = None
         self.color = 0xFF3351
 
@@ -41,7 +41,7 @@ class miiapy(commands.AutoShardedBot):
 
     def run(self):
         try:
-            super().run(self.bot_token, bot=True, reconnect=True)
+            super().run(self.BOT_TOKEN, bot=True, reconnect=True)
         except:
             print("Uh oh something broke, the bot can't start!")
 

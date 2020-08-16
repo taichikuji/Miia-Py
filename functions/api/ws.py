@@ -1,6 +1,6 @@
 from discord import Embed
 from discord.ext import commands
-from config import openweather_token
+from config import OPENWEATHER_MAP
 from datetime import datetime
 
 
@@ -18,20 +18,15 @@ class api(commands.Cog):
             # token comes from config.py file through the import config at the start of this file
             params = {
                 'q': values['city'],
-                'appid': openweather_token,
+                'appid': OPENWEATHER_MAP,
                 'units': values['unit']
             }
             async with self.bot.session.get(
                     'https://api.openweathermap.org/data/2.5/weather', params=params) as api_result:
-                try:
-                    # returns api result
-                    stats_json = await api_result.json()
-                    icon = self.icon(stats_json)
-                    embed = self.weather_embed(stats_json, icon, unit)
-                    await ctx.send(embed=embed)
-                except:
-                    await ctx.send(":x: Error handling the API")
-                    return None
+                # returns api result
+                stats_json = await api_result.json()
+                embed = self.weather_embed(stats_json, unit)
+                await ctx.send(embed=embed)
 
     def unit_value(self, args):
         # Tries to get optional values like fahrenheit or celsius for proper measurement
@@ -95,13 +90,14 @@ class api(commands.Cog):
             icon = '🌫️'
         return icon
 
-    def weather_embed(self, stats_json_array, icon, unit):
+    def weather_embed(self, stats_json_array, unit):
         try:
             ws = stats_json_array
+            emoji = self.icon(ws)
             # creation of embed with all important OpenWeatherMap's json info
             em = {
                 "title": f"Weather in **{ws['name']}**, **{ws['sys']['country']}**",
-                "description": f"{icon} {ws['weather'][0]['main']}, {ws['weather'][0]['description']}",
+                "description": f"{emoji} {ws['weather'][0]['main']}, {ws['weather'][0]['description']}",
                 "color": self.bot.color,
                 "thumbnail": {"url": f"https://openweathermap.org/img/wn/{ws['weather'][0]['icon']}@2x.png"},
                 "fields": [{"name": "Weather",
