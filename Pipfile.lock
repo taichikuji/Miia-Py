@@ -195,11 +195,11 @@
         },
         "praw": {
             "hashes": [
-                "sha256:6b93ad1e53385c68753203ec87f4d0053b2425b09fc8813847800a542efdfe6c",
-                "sha256:fb55e46203a771342da7cbe144fbcd8c61d825719ce1025bdd72112194a0228f"
+                "sha256:068a01c19834e1f748a8c220c6aa62ae9f0f8e211504ab8ef19883d09bed3430",
+                "sha256:87166a77ec31a1d9686ccdac97b5b72ba277ce436976eb3baf467c593f15bb26"
             ],
             "index": "pypi",
-            "version": "==7.1.0"
+            "version": "==7.1.4"
         },
         "prawcore": {
             "hashes": [
