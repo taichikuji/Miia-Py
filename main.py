@@ -10,10 +10,12 @@ class miiapy(commands.AutoShardedBot):
     def __init__(self):
         super().__init__(command_prefix=commands.when_mentioned_or('?'),
                          description='O-oi, what are you looking at?',
-                         fetch_offline_members=False, case_insensitive=True)
+                         case_insensitive=True,
+                         intents=discord.Intents.all())
         self.BOT_TOKEN = config.TOKEN
         self.session = None
         self.color = 0xFF3351
+        self.owner_id = 199632174603829249
 
         for functions in iglob('functions/**/*.py', recursive=True):
             module = functions.replace('.py', '').replace(sep, '.')

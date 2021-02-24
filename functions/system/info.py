@@ -36,8 +36,8 @@ class miia(commands.Cog):
                        {"name": "Memory",
                         "value": await self._get_mem_usage(),
                         "inline": True}],
-            "footer": {"text": f"Made by {self.bot.get_user(id=199632174603829249)}",
-                       "icon_url": f"{self.bot.get_user(id=199632174603829249).avatar_url}"}
+            "footer": {"text": f"Made by {self.bot.get_user(id=self.bot.owner_id)}",
+                       "icon_url": f"{self.bot.get_user(id=self.bot.owner_id).avatar_url}"}
         }
         embed = Embed.from_dict(em)
         return embed
