@@ -18,7 +18,6 @@ class miia(commands.Cog):
         await ctx.send(embed=embed)
 
     async def create_embed(self, ctx):
-        # creation of embed with all important info
         em = {
             "title": "Bot's info",
             "description": "Oh, you wanna know more about me? I'm [Miia](https://github.com/taichikuji/Miia-Py). Here's some information regarding me and my dependencies!",

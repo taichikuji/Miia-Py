@@ -1,4 +1,4 @@
-import discord
+from discord import Intents, Activity, ActivityType
 from os import sep
 import config
 from discord.ext import commands
@@ -11,7 +11,7 @@ class miiapy(commands.AutoShardedBot):
         super().__init__(command_prefix=commands.when_mentioned_or('?'),
                          description='O-oi, what are you looking at?',
                          case_insensitive=True,
-                         intents=discord.Intents.all())
+                         intents=Intents.all())
         self.BOT_TOKEN = config.TOKEN
         self.session = None
         self.color = 0xFF3351
@@ -30,8 +30,8 @@ class miiapy(commands.AutoShardedBot):
         # Created aiohttp ClientSession
 
     async def on_ready(self):
-        display = discord.Activity(
-            name="?help", type=discord.ActivityType.listening)
+        display = Activity(
+            name="?help", type=ActivityType.listening)
         self.loop.create_task(self.create_aiohttp_session())
         # Create ClientSession task set
         await self.change_presence(activity=display)
