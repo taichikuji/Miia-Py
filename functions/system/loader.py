@@ -1,4 +1,4 @@
-from time import strftime, localtime, sleep
+from time import strftime, localtime
 from discord.ext import commands
 
 
