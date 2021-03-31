@@ -13,9 +13,9 @@ Miia is a bot written in Python, based on the snake girl ( or Lamia ) from the A
 
 Mainly to learn Python a bit more and... After trying it for a few days, it's super fun!
 
-## How do i make it work?
+## How do I make it work?
 
-That will be released as a [Wiki](https://github.com/taichikuji/miia-py/wiki) in the near future. Hold tight!
+<a href="https://github.com/taichikuji/Miia-Py/wiki/How-to-get-the-bot-working/">Here you have info for that!</a>
 
 ## Uses:
 
