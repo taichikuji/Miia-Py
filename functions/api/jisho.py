@@ -6,7 +6,7 @@ from typing import Dict, List, Set
 from re import finditer
 
 
-class api(Cog):
+class miia(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.jisho_url = "http://jisho.org/search/{}"
@@ -119,4 +119,4 @@ class api(Cog):
 
 
 def setup(bot):
-    bot.add_cog(api(bot))
+    bot.add_cog(miia(bot))

@@ -3,7 +3,7 @@ from discord.ext import commands
 from config import WAIFU_TOKEN
 
 
-class api(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -50,4 +50,4 @@ class api(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(api(bot))
+    bot.add_cog(miia(bot))
