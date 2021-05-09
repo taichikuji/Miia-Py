@@ -1,9 +1,8 @@
+from config import REDDIT_ID, REDDIT_TOKEN
 from discord import Embed
 from discord.ext import commands
 from praw import Reddit
 from prawcore import BadRequest, Forbidden, NotFound
-
-from config import REDDIT_ID, REDDIT_TOKEN
 from utils.paginator import Paginator
 
 
@@ -45,7 +44,7 @@ class miia(commands.Cog):
                 )
             except TypeError:
                 await ctx.send(
-                    ":x: `TypeError`, it might have not found any results or you're searching nsfw posts on a sfw channel!"
+                    ":x: `TypeError`, it didn't find any results or you're searching nsfw posts on a sfw channel!"
                 )
             except Exception:
                 await ctx.send(":x: Unexpected exception!")

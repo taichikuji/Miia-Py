@@ -1,9 +1,8 @@
 from datetime import datetime
 
+from config import OPENWEATHER_MAP
 from discord import Embed
 from discord.ext import commands
-
-from config import OPENWEATHER_MAP
 
 
 class miia(commands.Cog):
@@ -95,7 +94,8 @@ class miia(commands.Cog):
                 "fields": [
                     {
                         "name": "Weather",
-                        "value": f"**Temperature**: {ws['main']['temp']}{unit['temp']}, feels like {ws['main']['feels_like']}{unit['temp']}\n"
+                        "value": f"**Temperature**: {ws['main']['temp']}{unit['temp']},"
+                        "feels like {ws['main']['feels_like']}{unit['temp']}\n"
                         f"**Wind**: {ws['wind']['speed']}{unit['speed']}\n"
                         f"**Clouds**: {ws['clouds']['all']}%\n"
                         f"**Humidity**: {ws['main']['humidity']}%\n",

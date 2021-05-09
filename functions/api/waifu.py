@@ -1,7 +1,6 @@
+from config import WAIFU_TOKEN
 from discord import Embed
 from discord.ext import commands
-
-from config import WAIFU_TOKEN
 
 
 class miia(commands.Cog):
@@ -33,7 +32,7 @@ class miia(commands.Cog):
                         "image": {"url": image_url},
                     }
                     await ctx.send(embed=Embed.from_dict(em))
-                except:
+                except Exception:
                     await ctx.send(":x: Error handling the API")
                     return None
 
@@ -51,7 +50,7 @@ class miia(commands.Cog):
                 elif len(msg[1].embeds) == 1 and msg[1].embeds[0].type == "image":
                     image = msg[1].embeds[0].url
                 else:
-                    await ctx.send(f":x: No image was found, try again!")
+                    await ctx.send(":x: No image was found, try again!")
                     return None
         return image
 

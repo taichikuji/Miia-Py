@@ -1,11 +1,10 @@
+import config
 from glob import iglob
 from os import sep
 
 from aiohttp import ClientSession
 from discord import Activity, ActivityType, Intents
 from discord.ext import commands
-
-import config
 
 
 class miiapy(commands.AutoShardedBot):
