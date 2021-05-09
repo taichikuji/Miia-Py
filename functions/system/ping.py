@@ -6,13 +6,15 @@ class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="ping",
-                      brief="Show Miia's Latency",
-                      description="Show Miia's Latency in ms",
-                      usage="`ping`")
+    @commands.command(
+        name="ping",
+        brief="Show Miia's Latency",
+        description="Show Miia's Latency in ms",
+        usage="`ping`",
+    )
     async def ping(self, ctx):
         embed = Embed(color=self.bot.color)
-        latency = f'Latency: **{round(self.bot.latency * 1000)}** ms'
+        latency = f"Latency: **{round(self.bot.latency * 1000)}** ms"
         embed.description = latency
         await ctx.send(embed=embed)
 

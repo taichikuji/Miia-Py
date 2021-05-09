@@ -3,8 +3,9 @@ from discord.ext.menus import ListPageSource, MenuPages
 
 class Paginator(MenuPages):
     def __init__(self, entries):
-        super().__init__(source=PaginatorSource(entries),
-                         clear_reactions_after=True, timeout=60)
+        super().__init__(
+            source=PaginatorSource(entries), clear_reactions_after=True, timeout=60
+        )
 
 
 class PaginatorSource(ListPageSource):

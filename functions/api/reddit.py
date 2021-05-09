@@ -2,6 +2,7 @@ from discord import Embed
 from discord.ext import commands
 from praw import Reddit
 from prawcore import BadRequest, Forbidden, NotFound
+
 from config import REDDIT_ID, REDDIT_TOKEN
 from utils.paginator import Paginator
 
@@ -11,37 +12,47 @@ class api(commands.Cog):
         self.bot = bot
         self.reddit = None
         if REDDIT_ID and REDDIT_TOKEN:
-            self.reddit = Reddit(client_id=REDDIT_ID,
-                                 client_secret=REDDIT_TOKEN,
-                                 user_agent='Miia:%s:0.1.7' % REDDIT_ID)
+            self.reddit = Reddit(
+                client_id=REDDIT_ID,
+                client_secret=REDDIT_TOKEN,
+                user_agent="Miia:%s:0.1.7" % REDDIT_ID,
+            )
 
-    @commands.command(name="reddit",
-                      aliases=['r'],
-                      brief="Shows a list of posts from a subreddit",
-                      description="Shows a list of posts from a subreddit, with pagination!",
-                      usage="`reddit <subreddit>`\n"
-                      "`r | reddit ( s | shuffle | r | rising ) <subreddit>`")
+    @commands.command(
+        name="reddit",
+        aliases=["r"],
+        brief="Shows a list of posts from a subreddit",
+        description="Shows a list of posts from a subreddit, with pagination!",
+        usage="`reddit <subreddit>`\n"
+        "`r | reddit ( s | shuffle | r | rising ) <subreddit>`",
+    )
     async def rpost(self, ctx, *args: str):
         async with ctx.typing():
             try:
                 results = await self._parse(ctx, self.subreddit(args))
                 await Paginator(results).start(ctx)
             except BadRequest:
-                await ctx.send(":x: Bad request, have you written the subreddit correctly?")
+                await ctx.send(
+                    ":x: Bad request, have you written the subreddit correctly?"
+                )
             except Forbidden:
                 await ctx.send(":x: Forbidden request, I can't access it!")
             except NotFound:
                 await ctx.send(":x: Subreddit not found!")
             except IndexError:
-                await ctx.send(":x: `IndexError`, did you type a subreddit? Check `help reddit` for more information!")
+                await ctx.send(
+                    ":x: `IndexError`, did you type a subreddit? Check `help reddit` for more information!"
+                )
             except TypeError:
-                await ctx.send(":x: `TypeError`, it might have not found any results or you're searching nsfw posts on a sfw channel!")
-            except:
+                await ctx.send(
+                    ":x: `TypeError`, it might have not found any results or you're searching nsfw posts on a sfw channel!"
+                )
+            except Exception:
                 await ctx.send(":x: Unexpected exception!")
 
     def subreddit(self, args):
         # Tries to get optional value, if it can't it puts the first value as a subreddit
-        if args[0] in ['s', 'shuffle', 'r', 'rising'] and args[1]:
+        if args[0] in ["s", "shuffle", "r", "rising"] and args[1]:
             option = self.reddit.subreddit(args[1]).random_rising(limit=20)
         else:
             option = self.reddit.subreddit(args[0]).hot(limit=20)
@@ -50,7 +61,7 @@ class api(commands.Cog):
     def is_safe(self, submission, ctx):
         # This filters out posts that aren't compatible
         # (both channel and post have to be either sfw or nsfw)
-        if (not ctx.channel.is_nsfw() and submission.over_18):
+        if not ctx.channel.is_nsfw() and submission.over_18:
             safe = False
         else:
             safe = True
@@ -59,8 +70,10 @@ class api(commands.Cog):
     def is_image(self, submission):
         value = None
         # This filters out any links that don't have pictures
-        if any(extension in submission.url
-               for extension in ('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+        if any(
+            extension in submission.url
+            for extension in (".jpg", ".jpeg", ".png", ".gif", ".webp")
+        ):
             value = submission.url
         return value
 
@@ -73,7 +86,7 @@ class api(commands.Cog):
                     em = {
                         "title": f"{submission.title}",
                         "url": submission.url,
-                        "permalink": submission.permalink
+                        "permalink": submission.permalink,
                     }
                     results.append(em)
         return await self.reddit_embed(results)
@@ -86,11 +99,11 @@ class api(commands.Cog):
             return None
         for start, values in enumerate(results, 1):
             em = {
-                "title": values['title'],
+                "title": values["title"],
                 "url": f"https://reddit.com{values['permalink']}",
                 "color": self.bot.color,
-                "image": {"url": values['url']},
-                "footer": {"text": f"Page {start}/{size}"}
+                "image": {"url": values["url"]},
+                "footer": {"text": f"Page {start}/{size}"},
             }
             embed = Embed.from_dict(em)
             embed_results.append(embed)
