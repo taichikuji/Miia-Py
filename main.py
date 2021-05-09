@@ -1,7 +1,7 @@
-import config
 from glob import iglob
 from os import sep
 
+from config import TOKEN
 from aiohttp import ClientSession
 from discord import Activity, ActivityType, Intents
 from discord.ext import commands
@@ -15,7 +15,7 @@ class miiapy(commands.AutoShardedBot):
             case_insensitive=True,
             intents=Intents.all(),
         )
-        self.BOT_TOKEN = config.TOKEN
+        self.BOT_TOKEN = TOKEN
         self.session = None
         self.color = 0xFF3351
         self.owner_id = 199632174603829249

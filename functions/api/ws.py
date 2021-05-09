@@ -94,8 +94,7 @@ class miia(commands.Cog):
                 "fields": [
                     {
                         "name": "Weather",
-                        "value": f"**Temperature**: {ws['main']['temp']}{unit['temp']},"
-                        "feels like {ws['main']['feels_like']}{unit['temp']}\n"
+                        "value": f"**Temperature**: {ws['main']['temp']}{unit['temp']}, feels like {ws['main']['feels_like']}{unit['temp']}\n"
                         f"**Wind**: {ws['wind']['speed']}{unit['speed']}\n"
                         f"**Clouds**: {ws['clouds']['all']}%\n"
                         f"**Humidity**: {ws['main']['humidity']}%\n",
@@ -107,7 +106,7 @@ class miia(commands.Cog):
                         f"**Sunset**: {datetime.fromtimestamp(ws['sys']['sunset']+ws['timezone']).strftime('%H:%M')}\n",
                     },
                 ],
-                # careful with the footer information, if you see data is wrong, try removing the timezone and check again
+                # Careful with the footer information, if you see data is wrong, try removing the timezone and check again
                 "footer": {
                     "text": f"Data collected at {datetime.fromtimestamp(ws['dt']+ws['timezone']).strftime('%H:%M:%S')}"
                 },
