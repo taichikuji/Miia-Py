@@ -7,7 +7,7 @@ from config import REDDIT_ID, REDDIT_TOKEN
 from utils.paginator import Paginator
 
 
-class api(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.reddit = None
@@ -111,4 +111,4 @@ class api(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(api(bot))
+    bot.add_cog(miia(bot))

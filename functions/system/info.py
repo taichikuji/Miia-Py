@@ -30,7 +30,7 @@ class miia(commands.Cog):
                 {
                     "name": "Bot version",
                     "value": f"**Python**: {python_version()}\n"
-                    f"**Miia-Py**: 0.1.8\n",
+                    f"**Miia-Py**: 0.2.0\n",
                     "inline": True,
                 },
                 {"name": "OS", "value": f"**{system()}**: {machine()}"},

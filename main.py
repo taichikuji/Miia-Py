@@ -26,8 +26,12 @@ class miiapy(commands.AutoShardedBot):
             try:
                 self.load_extension(module)
                 print(f"Module {module} loaded")
-            except:
-                print(f"Failed to load {module}")
+            except ImportError:
+                print(f"Failed to import {module}")
+            except commands.errors.ExtensionFailed:
+                print(f"{module} extension failed")
+            except Exception:
+                print(f"Unexpected exception related with {module}")
 
     async def create_aiohttp_session(self):
         self.session = ClientSession(loop=self.loop)

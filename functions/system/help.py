@@ -52,7 +52,7 @@ class HelpMenu(ListPageSource):
         return await self.write_page(menu, fields)
 
 
-class Help(Cog):
+class miia(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command("help")
@@ -93,4 +93,4 @@ class Help(Cog):
 
 
 def setup(bot):
-    bot.add_cog(Help(bot))
+    bot.add_cog(miia(bot))

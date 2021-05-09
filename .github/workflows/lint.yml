@@ -1,0 +1,24 @@
+name: "MiiaPy Code Linting"
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev, master ]
+
+jobs:
+  lint:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Lint Code Base
+        uses: github/super-linter@v3
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          IGNORE_GITIGNORED_FILES: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
