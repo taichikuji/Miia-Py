@@ -21,5 +21,6 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           IGNORE_GITIGNORED_FILES: true
+          LINTER_RULES_PATH: /.github/linters
           PYTHON_FLAKE8_CONFIG_FILE: ".flake8"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
