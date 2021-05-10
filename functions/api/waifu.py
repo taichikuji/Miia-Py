@@ -1,32 +1,38 @@
+from config import WAIFU_TOKEN
 from discord import Embed
 from discord.ext import commands
-from config import WAIFU_TOKEN
 
 
-class api(commands.Cog):
+class miia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="waifu",
-                      brief="Enlarge and enchance an image!",
-                      description="Enlarge and enchance an image using DeepAI's API. Resolution is limited to 1600p.",
-                      usage="`waifu <url> | <embedded image> | <previous url> | <previous embedded image>`")
+    @commands.command(
+        name="waifu",
+        brief="Enlarge and enchance an image!",
+        description="Enlarge and enchance an image using DeepAI's API. Resolution is limited to 1600p.",
+        usage="`waifu <url> | <embedded image> | <previous url> | <previous embedded image>`",
+    )
     async def waifu(self, ctx, *, image=None):
         async with ctx.typing():
             # token comes from config.py file through the import config at the start of this file
             image_url = await self.get_img(ctx, image=image)
-            async with self.bot.session.post("https://api.deepai.org/api/waifu2x", data={'image': image_url}, headers={'api-key': WAIFU_TOKEN}) as api_result:
+            async with self.bot.session.post(
+                "https://api.deepai.org/api/waifu2x",
+                data={"image": image_url},
+                headers={"api-key": WAIFU_TOKEN},
+            ) as api_result:
                 try:
                     # returns api result
-                    image_url = (await api_result.json())['output_url']
+                    image_url = (await api_result.json())["output_url"]
                     em = {
                         "url": image_url,
                         "title": f"{ctx.author.name}'s Waifu2x image",
                         "color": self.bot.color,
-                        "image": {"url": image_url}
+                        "image": {"url": image_url},
                     }
                     await ctx.send(embed=Embed.from_dict(em))
-                except:
+                except Exception:
                     await ctx.send(":x: Error handling the API")
                     return None
 
@@ -40,14 +46,14 @@ class api(commands.Cog):
                 # if message has an attachment, tries to apply it to image
                 if len(msg[1].attachments) != 0:
                     image = msg[1].attachments[0].url
-                 # if message has an embed type image, apply the url of the image to image
+                # if message has an embed type image, apply the url of the image to image
                 elif len(msg[1].embeds) == 1 and msg[1].embeds[0].type == "image":
                     image = msg[1].embeds[0].url
                 else:
-                    await ctx.send(f":x: No image was found, try again!")
+                    await ctx.send(":x: No image was found, try again!")
                     return None
         return image
 
 
 def setup(bot):
-    bot.add_cog(api(bot))
+    bot.add_cog(miia(bot))
