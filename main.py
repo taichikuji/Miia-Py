@@ -1,8 +1,8 @@
 from glob import iglob
 from os import sep
 
-from config import TOKEN
 from aiohttp import ClientSession
+from config import TOKEN
 from discord import Activity, ActivityType, Intents
 from discord.ext import commands
 
