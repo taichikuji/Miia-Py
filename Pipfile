@@ -7,7 +7,6 @@ verify_ssl = true
 autopep8 = "*"
 pylint = "*"
 flake8 = "*"
-black = "*"
 isort = "*"
 
 [packages]
