@@ -142,15 +142,15 @@
         },
         "charset-normalizer": {
             "hashes": [
-                "sha256:88fce3fa5b1a84fdcb3f603d889f723d1dd89b26059d0123ca435570e848d5e1",
-                "sha256:c46c3ace2d744cfbdebceaa3c19ae691f53ae621b39fd7570f59d14fb7f2fd12"
+                "sha256:0c8911edd15d19223366a194a513099a302055a962bca2cec0f54b8b63175d8b",
+                "sha256:f23667ebe1084be45f6ae0538e4a5a865206544097e4e8bbcacf42cd02a348f3"
             ],
             "markers": "python_version >= '3'",
-            "version": "==2.0.3"
+            "version": "==2.0.4"
         },
         "discord-ext-menus": {
             "git": "https://github.com/Rapptz/discord-ext-menus.git",
-            "ref": "309c70222eec33acacb8c21bbb0fbe9bc57de661"
+            "ref": "fbb8803779373357e274e1540b368365fd9d8074"
         },
         "discord.py": {
             "extras": [
@@ -224,11 +224,11 @@
         },
         "prawcore": {
             "hashes": [
-                "sha256:bde42fad459c4dcfe0f22a18921ef4981ee7cd286ea1de3eb697ba91838c9123",
-                "sha256:cb7a01e43202233d62c4f9c0da890f6e6a534cebc16fb6ef1e71aff7077b0f42"
+                "sha256:48c17db447fa06a13ca3e722201f443031437708daa736c05a1df895fbcceff5",
+                "sha256:daf1ccd4b7a80dc4e6567d48336d782e94a9a6dad83770fc2edf76dc9a84f56d"
             ],
             "markers": "python_version ~= '3.6'",
-            "version": "==2.2.0"
+            "version": "==2.3.0"
         },
         "psutil": {
             "hashes": [
@@ -472,11 +472,11 @@
         },
         "pylint": {
             "hashes": [
-                "sha256:1f333dc72ef7f5ea166b3230936ebcfb1f3b722e76c980cb9fe6b9f95e8d3172",
-                "sha256:748f81e5776d6273a6619506e08f1b48ff9bcb8198366a56821cf11aac14fc87"
+                "sha256:2e1a0eb2e8ab41d6b5dbada87f066492bb1557b12b76c47c2ee8aa8a11186594",
+                "sha256:8b838c8983ee1904b2de66cce9d0b96649a91901350e956d78f289c3bc87b48e"
             ],
             "index": "pypi",
-            "version": "==2.9.5"
+            "version": "==2.9.6"
         },
         "toml": {
             "hashes": [
