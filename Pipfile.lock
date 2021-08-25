@@ -336,11 +336,11 @@
         },
         "websocket-client": {
             "hashes": [
-                "sha256:b68e4959d704768fa20e35c9d508c8dc2bbc041fd8d267c0d7345cffe2824568",
-                "sha256:e5c333bfa9fa739538b652b6f8c8fc2559f1d364243c8a689d7c0e1d41c2e611"
+                "sha256:0133d2f784858e59959ce82ddac316634229da55b498aac311f1620567a710ec",
+                "sha256:8dfb715d8a992f5712fff8c843adae94e22b22a99b2c5e6b0ec4a1a981cc4e0d"
             ],
             "markers": "python_version >= '3.6'",
-            "version": "==1.1.0"
+            "version": "==1.2.1"
         },
         "yarl": {
             "hashes": [
@@ -389,11 +389,11 @@
     "develop": {
         "astroid": {
             "hashes": [
-                "sha256:7b963d1c590d490f60d2973e57437115978d3a2529843f160b5003b721e1e925",
-                "sha256:83e494b02d75d07d4e347b27c066fd791c0c74fc96c613d1ea3de0c82c48168f"
+                "sha256:b6c2d75cd7c2982d09e7d41d70213e863b3ba34d3bd4014e08f167cee966e99e",
+                "sha256:ecc50f9b3803ebf8ea19aa2c6df5622d8a5c31456a53c741d3be044d96ff0948"
             ],
             "markers": "python_version ~= '3.6'",
-            "version": "==2.6.5"
+            "version": "==2.7.2"
         },
         "autopep8": {
             "hashes": [
@@ -454,6 +454,14 @@
             ],
             "version": "==0.6.1"
         },
+        "platformdirs": {
+            "hashes": [
+                "sha256:4666d822218db6a262bdfdc9c39d21f23b4cfdb08af331a81e92751daf6c866c",
+                "sha256:632daad3ab546bd8e6af0537d09805cec458dce201bccfe23012df73332e181e"
+            ],
+            "markers": "python_version >= '3.6'",
+            "version": "==2.2.0"
+        },
         "pycodestyle": {
             "hashes": [
                 "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068",
@@ -472,11 +480,11 @@
         },
         "pylint": {
             "hashes": [
-                "sha256:2e1a0eb2e8ab41d6b5dbada87f066492bb1557b12b76c47c2ee8aa8a11186594",
-                "sha256:8b838c8983ee1904b2de66cce9d0b96649a91901350e956d78f289c3bc87b48e"
+                "sha256:6758cce3ddbab60c52b57dcc07f0c5d779e5daf0cf50f6faacbef1d3ea62d2a1",
+                "sha256:e178e96b6ba171f8ef51fbce9ca30931e6acbea4a155074d80cc081596c9e852"
             ],
             "index": "pypi",
-            "version": "==2.9.6"
+            "version": "==2.10.2"
         },
         "toml": {
             "hashes": [
