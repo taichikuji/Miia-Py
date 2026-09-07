@@ -44,6 +44,7 @@ def _make_cog():
 
 def _make_interaction():
     return SimpleNamespace(
+        user=SimpleNamespace(id=123),
         response=SimpleNamespace(send_message=AsyncMock(), defer=AsyncMock()),
         followup=SimpleNamespace(send=AsyncMock()),
     )
@@ -156,6 +157,54 @@ async def test_character_command_rejects_empty_name():
         ":x: Enter a character name to search for.", ephemeral=True
     )
     interaction.response.defer.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_command_paginates_cached_results_without_more_searches():
+    second = {
+        **MANGA,
+        "title": {"romaji": "Berserk: The Prototype"},
+        "siteUrl": "https://anilist.co/manga/30621",
+    }
+    cog = _make_cog()
+    cog._cached_search = AsyncMock(return_value=([MANGA, second], False))
+    interaction = _make_interaction()
+    message = SimpleNamespace(edit=AsyncMock())
+    interaction.followup.send.return_value = message
+
+    await anilist.AniListCog.manga.callback(cog, interaction, "Berserk")
+
+    sent = interaction.followup.send.await_args.kwargs
+    view = sent["view"]
+    assert isinstance(view, anilist.AniListPagination)
+    assert sent["embed"].title == "Berserk"
+    assert sent["embed"].footer.text.startswith("Page 1/2 • ")
+    assert sent["wait"] is True
+    assert view.message is message
+
+    navigation = SimpleNamespace(response=SimpleNamespace(edit_message=AsyncMock()))
+    await view.children[1].callback(navigation)
+
+    edited = navigation.response.edit_message.await_args.kwargs
+    assert edited["embed"].title == "Berserk: The Prototype"
+    assert edited["embed"].footer.text.startswith("Page 2/2 • ")
+    cog._cached_search.assert_awaited_once_with("Berserk", "MANGA")
+
+
+@pytest.mark.asyncio
+async def test_pagination_rejects_other_users():
+    view = anilist.AniListPagination(
+        [MANGA, MANGA], "MANGA", 0x123456, cached=False, owner_id=123
+    )
+    interaction = SimpleNamespace(
+        user=SimpleNamespace(id=456),
+        response=SimpleNamespace(send_message=AsyncMock()),
+    )
+
+    assert await view.interaction_check(interaction) is False
+    interaction.response.send_message.assert_awaited_once_with(
+        ":x: Only the person who searched can change this result.", ephemeral=True
+    )
 
 
 @pytest.mark.asyncio

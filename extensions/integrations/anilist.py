@@ -5,8 +5,16 @@ from time import monotonic
 from typing import TYPE_CHECKING, Any, Literal
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
-from discord import Embed, Interaction, app_commands
+from discord import (
+    ButtonStyle,
+    Embed,
+    HTTPException,
+    Interaction,
+    Message,
+    app_commands,
+)
 from discord.ext import commands
+from discord.ui import Button, View, button
 
 try:
     from ._anilist_test_headers import HEADERS as LOCAL_TEST_HEADERS
@@ -325,6 +333,89 @@ def character_embed(
     return embed
 
 
+def result_embed(
+    result: dict[str, Any], search_type: SearchType, color: int, *, cached: bool
+) -> Embed:
+    return (
+        character_embed(result, color, cached=cached)
+        if search_type == "CHARACTER"
+        else media_embed(result, search_type, color, cached=cached)
+    )
+
+
+class AniListPagination(View):
+    """Navigate one cached AniList result set without more API requests."""
+
+    def __init__(
+        self,
+        results: list[dict[str, Any]],
+        search_type: SearchType,
+        color: int,
+        *,
+        cached: bool,
+        owner_id: int,
+    ) -> None:
+        super().__init__(timeout=5 * 60)
+        self.results = results
+        self.search_type = search_type
+        self.color = color
+        self.cached = cached
+        self.owner_id = owner_id
+        self.index = 0
+        self.message: Message | None = None
+        self._sync_buttons()
+
+    def current_embed(self) -> Embed:
+        embed = result_embed(
+            self.results[self.index],
+            self.search_type,
+            self.color,
+            cached=self.cached,
+        )
+        footer = embed.footer.text or ""
+        embed.set_footer(
+            text=f"Page {self.index + 1}/{len(self.results)} • {footer}"[:2048]
+        )
+        return embed
+
+    def _sync_buttons(self) -> None:
+        previous, following = self.children
+        if isinstance(previous, Button):
+            previous.disabled = self.index == 0
+        if isinstance(following, Button):
+            following.disabled = self.index == len(self.results) - 1
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        if interaction.user.id == self.owner_id:
+            return True
+        await interaction.response.send_message(
+            ":x: Only the person who searched can change this result.", ephemeral=True
+        )
+        return False
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            if isinstance(item, Button):
+                item.disabled = True
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except HTTPException:
+                pass
+
+    @button(emoji="⬅️", label="Previous", style=ButtonStyle.secondary)
+    async def previous_result(self, interaction: Interaction, _button: Button) -> None:
+        self.index -= 1
+        self._sync_buttons()
+        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
+    @button(emoji="➡️", label="Next", style=ButtonStyle.secondary)
+    async def next_result(self, interaction: Interaction, _button: Button) -> None:
+        self.index += 1
+        self._sync_buttons()
+        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
+
 class AniListCog(commands.Cog):
     """Search AniList's public catalogue."""
 
@@ -416,12 +507,24 @@ class AniListCog(commands.Cog):
                 f":mag: No {label} found for `{query}`.", ephemeral=True
             )
             return
-        embed = (
-            character_embed(result[0], self.bot.color, cached=cached)
-            if search_type == "CHARACTER"
-            else media_embed(result[0], search_type, self.bot.color, cached=cached)
+        if len(result) == 1:
+            await interaction.followup.send(
+                embed=result_embed(
+                    result[0], search_type, self.bot.color, cached=cached
+                )
+            )
+            return
+
+        view = AniListPagination(
+            result,
+            search_type,
+            self.bot.color,
+            cached=cached,
+            owner_id=interaction.user.id,
         )
-        await interaction.followup.send(embed=embed)
+        view.message = await interaction.followup.send(
+            embed=view.current_embed(), view=view, wait=True
+        )
 
 
 async def setup(bot: Sakamoto) -> None:
