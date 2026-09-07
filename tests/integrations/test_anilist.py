@@ -95,6 +95,26 @@ def test_media_embed_truncates_description_at_word_boundary():
     assert description.removesuffix("…").split()[-1] == "word"
 
 
+def test_description_converts_anilist_spoilers_for_discord():
+    description = anilist._clean_description(
+        "Family: ~!Minato Namikaze (father), Kushina Uzumaki (mother)!~"
+    )
+
+    assert description == (
+        "Family: ||Minato Namikaze (father), Kushina Uzumaki (mother)||"
+    )
+    assert anilist._clean_description("Family: ~!Unknown") == "Family: ~!Unknown"
+
+
+def test_description_closes_spoiler_when_truncated():
+    description = anilist._clean_description("Family: ~!" + "secret " * 100 + "!~")
+
+    assert len(description) <= anilist.DESCRIPTION_LIMIT
+    assert description.startswith("Family: ||")
+    assert description.endswith("…||")
+    assert description.count("||") == 2
+
+
 def test_character_embed_uses_character_details():
     embed = anilist.character_embed(CHARACTER, 0x123456, cached=True)
 

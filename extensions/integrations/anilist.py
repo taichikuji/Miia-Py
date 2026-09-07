@@ -103,6 +103,28 @@ class _DescriptionParser(HTMLParser):
         self.parts.append(data)
 
 
+def _convert_spoilers(description: str) -> str:
+    """Convert balanced AniList spoiler markers to Discord spoiler markers."""
+    parts: list[str] = []
+    cursor = 0
+    while (start := description.find("~!", cursor)) >= 0:
+        end = description.find("!~", start + 2)
+        if end < 0:
+            break
+        parts.extend(
+            (description[cursor:start], "||", description[start + 2 : end], "||")
+        )
+        cursor = end + 2
+    parts.append(description[cursor:])
+    return "".join(parts)
+
+
+def _cut_at_word(description: str, limit: int) -> str:
+    shortened = description[:limit].rstrip()
+    word_end = max(shortened.rfind(" "), shortened.rfind("\n"))
+    return shortened[:word_end].rstrip() if word_end > 0 else shortened
+
+
 def _clean_description(value: Any) -> str:
     parser = _DescriptionParser()
     parser.feed(str(value or "No synopsis available."))
@@ -110,14 +132,17 @@ def _clean_description(value: Any) -> str:
     description = "".join(parser.parts).strip() or "No synopsis available."
     while "\n\n\n" in description:
         description = description.replace("\n\n\n", "\n\n")
+    description = _convert_spoilers(description)
     if len(description) <= DESCRIPTION_LIMIT:
         return description
 
-    shortened = description[: DESCRIPTION_LIMIT - 1].rstrip()
-    word_end = max(shortened.rfind(" "), shortened.rfind("\n"))
-    if word_end > 0:
-        shortened = shortened[:word_end].rstrip()
-    return f"{shortened}…"
+    shortened = _cut_at_word(description, DESCRIPTION_LIMIT - 1)
+    spoiler_close = ""
+    if shortened.count("||") % 2:
+        shortened = _cut_at_word(description, DESCRIPTION_LIMIT - 3)
+        if shortened.count("||") % 2:
+            spoiler_close = "||"
+    return f"{shortened}…{spoiler_close}"
 
 
 async def _request(
