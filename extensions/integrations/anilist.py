@@ -36,10 +36,11 @@ SearchType = Literal["ANIME", "MANGA", "CHARACTER"]
 CACHE_TTL_SECONDS = 15 * 60
 CACHE_LIMIT = 256
 DESCRIPTION_LIMIT = 500
+SEARCH_RESULT_LIMIT = 5
 
 MEDIA_SEARCH = """
-query ($search: String!, $type: MediaType!) {
-  Page(page: 1, perPage: 1) {
+query ($search: String!, $type: MediaType!, $perPage: Int!) {
+  Page(page: 1, perPage: $perPage) {
     media(search: $search, type: $type, isAdult: false) {
       title { romaji english native }
       siteUrl
@@ -59,8 +60,8 @@ query ($search: String!, $type: MediaType!) {
 """
 
 CHARACTER_SEARCH = """
-query ($search: String!) {
-  Page(page: 1, perPage: 1) {
+query ($search: String!, $perPage: Int!) {
+  Page(page: 1, perPage: $perPage) {
     characters(search: $search) {
       name { full native }
       siteUrl
@@ -130,7 +131,7 @@ def _clean_description(value: Any) -> str:
 
 
 async def _request(
-    session: ClientSession, query: str, variables: dict[str, str]
+    session: ClientSession, query: str, variables: dict[str, Any]
 ) -> dict[str, Any]:
     try:
         async with session.post(
@@ -155,13 +156,29 @@ async def _request(
     return payload
 
 
-def _first_page_result(payload: dict[str, Any], field: str) -> dict[str, Any] | None:
+def _page_results(payload: dict[str, Any], field: str) -> list[dict[str, Any]]:
     data = payload.get("data")
     page = data.get("Page") if isinstance(data, dict) else None
     results = page.get(field) if isinstance(page, dict) else None
-    if not isinstance(results, list):
+    if not isinstance(results, list) or not all(
+        isinstance(result, dict) for result in results
+    ):
         raise AniListError("AniList returned an unexpected response.")
-    return results[0] if results and isinstance(results[0], dict) else None
+    return results
+
+
+async def _search_media_results(
+    session: ClientSession,
+    title: str,
+    media_type: MediaType,
+    limit: int = SEARCH_RESULT_LIMIT,
+) -> list[dict[str, Any]]:
+    payload = await _request(
+        session,
+        MEDIA_SEARCH,
+        {"search": title, "type": media_type, "perPage": limit},
+    )
+    return _page_results(payload, "media")
 
 
 async def search_media(
@@ -171,10 +188,19 @@ async def search_media(
     title = title.strip()
     if not title:
         raise ValueError("An AniList search title is required.")
+    results = await _search_media_results(session, title, media_type, 1)
+    return results[0] if results else None
+
+
+async def _search_character_results(
+    session: ClientSession, name: str, limit: int = SEARCH_RESULT_LIMIT
+) -> list[dict[str, Any]]:
     payload = await _request(
-        session, MEDIA_SEARCH, {"search": title, "type": media_type}
+        session,
+        CHARACTER_SEARCH,
+        {"search": name, "perPage": limit},
     )
-    return _first_page_result(payload, "media")
+    return _page_results(payload, "characters")
 
 
 async def search_character(session: ClientSession, name: str) -> dict[str, Any] | None:
@@ -182,8 +208,8 @@ async def search_character(session: ClientSession, name: str) -> dict[str, Any] 
     name = name.strip()
     if not name:
         raise ValueError("An AniList character name is required.")
-    payload = await _request(session, CHARACTER_SEARCH, {"search": name})
-    return _first_page_result(payload, "characters")
+    results = await _search_character_results(session, name, 1)
+    return results[0] if results else None
 
 
 def _label(value: Any) -> str:
@@ -305,13 +331,13 @@ class AniListCog(commands.Cog):
     def __init__(self, bot: Sakamoto) -> None:
         self.bot = bot
         self.search_cache: dict[
-            tuple[SearchType, str], tuple[float, dict[str, Any] | None]
+            tuple[SearchType, str], tuple[float, list[dict[str, Any]]]
         ] = {}
         self.search_lock = Lock()
 
     async def _cached_search(
         self, query: str, search_type: SearchType
-    ) -> tuple[dict[str, Any] | None, bool]:
+    ) -> tuple[list[dict[str, Any]], bool]:
         key = (search_type, " ".join(query.casefold().split()))
         if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
             return cached[1], True
@@ -320,9 +346,9 @@ class AniListCog(commands.Cog):
             if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
                 return cached[1], True
             result = (
-                await search_character(self.bot.session, query)
+                await _search_character_results(self.bot.session, query)
                 if search_type == "CHARACTER"
-                else await search_media(self.bot.session, query, search_type)
+                else await _search_media_results(self.bot.session, query, search_type)
             )
             now = monotonic()
             self.search_cache = {
@@ -385,15 +411,15 @@ class AniListCog(commands.Cog):
             await interaction.followup.send(message, ephemeral=True)
             return
 
-        if result is None:
+        if not result:
             await interaction.followup.send(
                 f":mag: No {label} found for `{query}`.", ephemeral=True
             )
             return
         embed = (
-            character_embed(result, self.bot.color, cached=cached)
+            character_embed(result[0], self.bot.color, cached=cached)
             if search_type == "CHARACTER"
-            else media_embed(result, search_type, self.bot.color, cached=cached)
+            else media_embed(result[0], search_type, self.bot.color, cached=cached)
         )
         await interaction.followup.send(embed=embed)
 

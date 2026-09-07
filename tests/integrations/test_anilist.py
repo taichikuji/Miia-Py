@@ -71,7 +71,7 @@ def test_manga_embed_uses_horizontal_manga_details():
 @pytest.mark.asyncio
 async def test_manga_command_uses_shared_search_path():
     cog = _make_cog()
-    cog._cached_search = AsyncMock(return_value=(MANGA, True))
+    cog._cached_search = AsyncMock(return_value=([MANGA], True))
     interaction = _make_interaction()
 
     await anilist.AniListCog.manga.callback(cog, interaction, " Berserk ")
@@ -133,7 +133,7 @@ def test_character_embed_uses_character_details():
 @pytest.mark.asyncio
 async def test_character_command_uses_cached_search_path():
     cog = _make_cog()
-    cog._cached_search = AsyncMock(return_value=(CHARACTER, False))
+    cog._cached_search = AsyncMock(return_value=([CHARACTER], False))
     interaction = _make_interaction()
 
     await anilist.AniListCog.character.callback(cog, interaction, " Luffy ")
@@ -160,16 +160,16 @@ async def test_character_command_rejects_empty_name():
 
 @pytest.mark.asyncio
 async def test_character_search_reuses_shared_cache(monkeypatch):
-    search = AsyncMock(return_value=CHARACTER)
-    monkeypatch.setattr(anilist, "search_character", search)
+    search = AsyncMock(return_value=[CHARACTER])
+    monkeypatch.setattr(anilist, "_search_character_results", search)
     cog = _make_cog()
 
     assert await cog._cached_search("Monkey D. Luffy", "CHARACTER") == (
-        CHARACTER,
+        [CHARACTER],
         False,
     )
     assert await cog._cached_search(" monkey d. luffy ", "CHARACTER") == (
-        CHARACTER,
+        [CHARACTER],
         True,
     )
     search.assert_awaited_once_with(cog.bot.session, "Monkey D. Luffy")
@@ -182,18 +182,18 @@ async def test_cache_normalizes_queries_and_keeps_empty_results(monkeypatch):
 
     async def search(_session, title, media_type):
         calls.append((title, media_type))
-        return None if len(calls) == 1 else {"id": 1}
+        return [] if len(calls) == 1 else [{"id": 1}]
 
     monkeypatch.setattr(anilist, "monotonic", lambda: now[0])
-    monkeypatch.setattr(anilist, "search_media", search)
+    monkeypatch.setattr(anilist, "_search_media_results", search)
     cog = _make_cog()
 
-    assert await cog._cached_search("Cowboy  Bebop", "ANIME") == (None, False)
-    assert await cog._cached_search(" cowboy bebop ", "ANIME") == (None, True)
+    assert await cog._cached_search("Cowboy  Bebop", "ANIME") == ([], False)
+    assert await cog._cached_search(" cowboy bebop ", "ANIME") == ([], True)
     assert len(calls) == 1
 
     now[0] = anilist.CACHE_TTL_SECONDS + 1
-    assert await cog._cached_search("cowboy bebop", "ANIME") == ({"id": 1}, False)
+    assert await cog._cached_search("cowboy bebop", "ANIME") == ([{"id": 1}], False)
     assert len(calls) == 2
 
 
@@ -202,7 +202,7 @@ async def test_cache_coalesces_concurrent_equivalent_searches(monkeypatch):
     started = asyncio.Event()
     release = asyncio.Event()
     calls = 0
-    result = {"id": 1}
+    result = [{"id": 1}]
 
     async def search(_session, _title, _media_type):
         nonlocal calls
@@ -211,7 +211,7 @@ async def test_cache_coalesces_concurrent_equivalent_searches(monkeypatch):
         await release.wait()
         return result
 
-    monkeypatch.setattr(anilist, "search_media", search)
+    monkeypatch.setattr(anilist, "_search_media_results", search)
     cog = _make_cog()
 
     first = asyncio.create_task(cog._cached_search("Frieren", "ANIME"))
@@ -230,7 +230,7 @@ async def test_cache_coalesces_concurrent_equivalent_searches(monkeypatch):
 @pytest.mark.asyncio
 async def test_cache_does_not_store_failures(monkeypatch):
     calls = 0
-    result = {"id": 1}
+    result = [{"id": 1}]
 
     async def search(_session, _title, _media_type):
         nonlocal calls
@@ -239,7 +239,7 @@ async def test_cache_does_not_store_failures(monkeypatch):
             raise anilist.AniListError("unavailable", 503)
         return result
 
-    monkeypatch.setattr(anilist, "search_media", search)
+    monkeypatch.setattr(anilist, "_search_media_results", search)
     cog = _make_cog()
 
     with pytest.raises(anilist.AniListError):
@@ -252,11 +252,13 @@ async def test_cache_does_not_store_failures(monkeypatch):
 async def test_cache_stays_bounded(monkeypatch):
     monkeypatch.setattr(anilist, "monotonic", lambda: 0.0)
     monkeypatch.setattr(
-        anilist, "search_media", lambda *_args: asyncio.sleep(0, result={"id": 999})
+        anilist,
+        "_search_media_results",
+        lambda *_args: asyncio.sleep(0, result=[{"id": 999}]),
     )
     cog = _make_cog()
     cog.search_cache = {
-        ("ANIME", f"title {index}"): (100.0, {"id": index})
+        ("ANIME", f"title {index}"): (100.0, [{"id": index}])
         for index in range(anilist.CACHE_LIMIT)
     }
 
