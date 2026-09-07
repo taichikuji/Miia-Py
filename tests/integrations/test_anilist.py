@@ -2,6 +2,7 @@ import asyncio
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -9,9 +10,59 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from extensions.integrations import anilist
 
+MANGA = {
+    "title": {"romaji": "Berserk", "english": "Berserk"},
+    "siteUrl": "https://anilist.co/manga/30002",
+    "description": "A lone swordsman seeks revenge.<br><br>(Source: Dark Horse)",
+    "coverImage": {"large": "https://example.test/berserk.jpg"},
+    "format": "MANGA",
+    "status": "FINISHED",
+    "chapters": 380,
+    "volumes": 42,
+    "averageScore": 90,
+    "genres": ["Action", "Drama", "Fantasy"],
+}
+
 
 def _make_cog():
     return anilist.AniListCog(SimpleNamespace(session=object(), color=0x123456))
+
+
+def _make_interaction():
+    return SimpleNamespace(
+        response=SimpleNamespace(send_message=AsyncMock(), defer=AsyncMock()),
+        followup=SimpleNamespace(send=AsyncMock()),
+    )
+
+
+def test_manga_embed_uses_horizontal_manga_details():
+    embed = anilist.media_embed(MANGA, "MANGA", 0x123456)
+
+    assert embed.title == "Berserk"
+    assert embed.url == MANGA["siteUrl"]
+    assert "<br>" not in embed.description
+    assert [(field.name, field.value) for field in embed.fields] == [
+        ("⭐ Score", "90/100"),
+        ("📖 Chapters", "380"),
+        ("📚 Volumes", "42"),
+    ]
+    assert embed.footer.text == "Manga • Finished • Action • Drama • Fantasy"
+    assert embed.thumbnail.url == MANGA["coverImage"]["large"]
+
+
+@pytest.mark.asyncio
+async def test_manga_command_uses_shared_search_path():
+    cog = _make_cog()
+    cog._cached_search = AsyncMock(return_value=MANGA)
+    interaction = _make_interaction()
+
+    await anilist.AniListCog.manga.callback(cog, interaction, " Berserk ")
+
+    interaction.response.defer.assert_awaited_once_with()
+    cog._cached_search.assert_awaited_once_with("Berserk", "MANGA")
+    embed = interaction.followup.send.await_args.kwargs["embed"]
+    assert embed.title == "Berserk"
+    assert embed.fields[1].name == "📖 Chapters"
 
 
 @pytest.mark.asyncio

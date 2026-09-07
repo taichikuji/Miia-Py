@@ -47,6 +47,8 @@ query ($search: String!, $type: MediaType!) {
       format
       status
       episodes
+      chapters
+      volumes
       averageScore
       genres
     }
@@ -111,8 +113,8 @@ def _label(value: Any) -> str:
     )
 
 
-def anime_embed(media: dict[str, Any], color: int) -> Embed:
-    """Build a compact, linked embed for one anime result."""
+def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Embed:
+    """Build a compact, linked embed for one anime or manga result."""
     titles = media.get("title")
     if not isinstance(titles, dict):
         titles = {}
@@ -120,7 +122,7 @@ def anime_embed(media: dict[str, Any], color: int) -> Embed:
         titles.get("romaji")
         or titles.get("english")
         or titles.get("native")
-        or "Unknown anime"
+        or f"Unknown {media_type.lower()}"
     )
     description = str(media.get("description") or "No synopsis available.").strip()
     for break_tag in ("<br>", "<br/>", "<br />"):
@@ -138,23 +140,27 @@ def anime_embed(media: dict[str, Any], color: int) -> Embed:
         color=color,
     )
     score = media.get("averageScore")
-    embed.add_field(
-        name="⭐ Score",
-        value=f"{score}/100" if isinstance(score, int) else "—",
-        inline=True,
-    )
-    embed.add_field(
-        name="🎬 Episodes",
-        value=str(media.get("episodes") or "—"),
-        inline=True,
-    )
-    embed.add_field(
-        name="📡 Status",
-        value=_label(media.get("status")),
-        inline=True,
-    )
+    metrics = [("⭐ Score", f"{score}/100" if isinstance(score, int) else "—")]
+    if media_type == "ANIME":
+        metrics.extend(
+            (
+                ("🎬 Episodes", str(media.get("episodes") or "—")),
+                ("📡 Status", _label(media.get("status"))),
+            )
+        )
+    else:
+        metrics.extend(
+            (
+                ("📖 Chapters", str(media.get("chapters") or "—")),
+                ("📚 Volumes", str(media.get("volumes") or "—")),
+            )
+        )
+    for name, value in metrics:
+        embed.add_field(name=name, value=value, inline=True)
 
     footer = [_label(media.get("format"))]
+    if media_type == "MANGA":
+        footer.append(_label(media.get("status")))
     genres = media.get("genres")
     if isinstance(genres, list) and genres:
         footer.extend(map(str, genres))
@@ -203,10 +209,21 @@ class AniListCog(commands.Cog):
     @app_commands.command(name="anime", description="Search AniList for an anime.")
     @app_commands.describe(query="Anime title to search for.")
     async def anime(self, interaction: Interaction, query: str) -> None:
+        await self._search_command(interaction, query, "ANIME")
+
+    @app_commands.command(name="manga", description="Search AniList for a manga.")
+    @app_commands.describe(query="Manga title to search for.")
+    async def manga(self, interaction: Interaction, query: str) -> None:
+        await self._search_command(interaction, query, "MANGA")
+
+    async def _search_command(
+        self, interaction: Interaction, query: str, media_type: MediaType
+    ) -> None:
+        label = media_type.lower()
         query = query.strip()
         if not query:
             await interaction.response.send_message(
-                ":x: Enter an anime title to search for.", ephemeral=True
+                f":x: Enter a {label} title to search for.", ephemeral=True
             )
             return
         if self.bot.session is None:
@@ -218,9 +235,11 @@ class AniListCog(commands.Cog):
 
         await interaction.response.defer()
         try:
-            media = await self._cached_search(query, "ANIME")
+            media = await self._cached_search(query, media_type)
         except AniListError as error:
-            logger.warning("AniList anime search failed with status %s", error.status)
+            logger.warning(
+                "AniList %s search failed with status %s", label, error.status
+            )
             message = (
                 ":x: AniList has temporarily disabled its API. Please try again later."
                 if error.status == 403
@@ -231,10 +250,12 @@ class AniListCog(commands.Cog):
 
         if media is None:
             await interaction.followup.send(
-                f":mag: No anime found for `{query}`.", ephemeral=True
+                f":mag: No {label} found for `{query}`.", ephemeral=True
             )
             return
-        await interaction.followup.send(embed=anime_embed(media, self.bot.color))
+        await interaction.followup.send(
+            embed=media_embed(media, media_type, self.bot.color)
+        )
 
 
 async def setup(bot: Sakamoto) -> None:
