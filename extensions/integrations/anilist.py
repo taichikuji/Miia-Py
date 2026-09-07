@@ -511,7 +511,11 @@ class AniListPagination(View):
         await interaction.response.edit_message(embed=self.current_embed(), view=self)
 
 
-class AniListCog(commands.Cog):
+class AniListCog(
+    commands.GroupCog,
+    group_name="anilist",
+    group_description="Search AniList's public catalogue.",
+):
     """Search AniList's public catalogue."""
 
     def __init__(self, bot: Sakamoto) -> None:

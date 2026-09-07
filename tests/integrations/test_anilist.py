@@ -63,6 +63,18 @@ def _make_interaction():
     )
 
 
+def test_commands_are_grouped_under_anilist():
+    group = _make_cog().app_command
+
+    assert group.name == "anilist"
+    assert [(command.name, command.qualified_name) for command in group.commands] == [
+        ("anime", "anilist anime"),
+        ("manga", "anilist manga"),
+        ("character", "anilist character"),
+        ("user", "anilist user"),
+    ]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("search_type", "document", "result_field", "variables", "result"),
