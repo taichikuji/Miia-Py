@@ -362,11 +362,15 @@ async def test_control_commands_return_early_when_same_channel_check_fails(comma
 
 def test_play_next_returns_without_voice_client(monkeypatch):
     cog = AudioEngine(_make_bot())
+    schedule = MagicMock(side_effect=lambda coro, _loop: coro.close())
     monkeypatch.setattr(
         "extensions.audio._audio_engine.run_coroutine_threadsafe",
-        lambda coro, _loop: coro.close(),
+        schedule,
     )
+
     cog.play_next(123)
+
+    schedule.assert_not_called()
     assert cog.sessions == {}
 
 
@@ -811,7 +815,7 @@ async def test_play_cleans_new_connection_when_source_lookup_fails(monkeypatch):
     await MusicCog.play.callback(cog, interaction, query="missing")
 
     voice_channel.connect.assert_awaited_once()
-    connected_client.stop.assert_called_once()
+    connected_client.stop.assert_not_called()
     connected_client.disconnect.assert_awaited_once()
     assert cog.engine.sessions == {}
 
@@ -1129,20 +1133,21 @@ async def test_queued_track_refreshes_stream_url_before_audio_engine(monkeypatch
         "extensions.audio._audio_engine.FFmpegOpusAudio",
         lambda stream_url, **_kw: f"audio:{stream_url}",
     )
+    item = QueueItem(
+        "https://youtube.test/watch?v=abc",
+        "Track",
+        "3:00",
+        "https://stream.test/stale",
+        refresh_stream,
+    )
 
     await cog.enqueue_or_play(
         1,
-        QueueItem(
-            "https://youtube.test/watch?v=abc",
-            "Track",
-            "3:00",
-            "https://stream.test/stale",
-            refresh_stream,
-        ),
+        item,
         followup=followup,
     )
 
-    item = session.queue.popleft()
+    assert session.queue.popleft() is item
     assert item.source_url == "https://youtube.test/watch?v=abc"
     assert item.stream_url is None
 
@@ -1273,6 +1278,25 @@ async def test_bot_disconnects_when_moved_to_empty_voice_channel():
 
 
 @pytest.mark.asyncio
+async def test_bot_disconnects_when_last_companion_bot_leaves_voice_channel():
+    bot = _make_bot()
+    bot.user = SimpleNamespace(id=99)
+    member = SimpleNamespace(id=42, bot=True, guild=SimpleNamespace(id=1))
+    channel = SimpleNamespace(members=[bot.user])
+    cog = AudioEngine(bot)
+    _add_session(cog, DummyVoiceClient(connected=True, channel=channel))
+    cog.disconnect_and_cleanup = AsyncMock()
+
+    await cog.handle_voice_state_update(
+        member,
+        SimpleNamespace(channel=channel),
+        SimpleNamespace(channel=None),
+    )
+
+    cog.disconnect_and_cleanup.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
 async def test_disconnect_and_cleanup_clears_all_state():
     vc = DummyVoiceClient(connected=True, playing=True)
     cog = AudioEngine(_make_bot())
@@ -1295,7 +1319,7 @@ async def test_disconnect_and_cleanup_clears_all_state():
     await cog.disconnect_and_cleanup(1)
     assert metadata_at_disconnect == [((), None, None)]
 
-    vc.stop.assert_called_once()
+    vc.stop.assert_not_called()
     vc.disconnect.assert_awaited_once()
     assert cog.sessions == {}
 
