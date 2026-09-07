@@ -80,7 +80,12 @@ async def search_media(
 
 
 def _label(value: Any) -> str:
-    return str(value).replace("_", " ").title() if value else "—"
+    if not value:
+        return "—"
+    return " ".join(
+        word if word in {"TV", "OVA", "ONA"} else word.title()
+        for word in str(value).split("_")
+    )
 
 
 def anime_embed(media: dict[str, Any], color: int) -> Embed:
@@ -95,6 +100,10 @@ def anime_embed(media: dict[str, Any], color: int) -> Embed:
         or "Unknown anime"
     )
     description = str(media.get("description") or "No synopsis available.").strip()
+    for break_tag in ("<br>", "<br/>", "<br />"):
+        description = description.replace(break_tag, "\n")
+    while "\n\n\n" in description:
+        description = description.replace("\n\n\n", "\n\n")
     if len(description) > 1000:
         description = f"{description[:999].rstrip()}…"
 
@@ -107,27 +116,31 @@ def anime_embed(media: dict[str, Any], color: int) -> Embed:
     )
     score = media.get("averageScore")
     embed.add_field(
-        name="Details",
-        value="\n".join(
-            (
-                f"Format: {_label(media.get('format'))}",
-                f"Status: {_label(media.get('status'))}",
-                f"Episodes: {media.get('episodes') or '—'}",
-                f"Score: {f'{score}/100' if isinstance(score, int) else '—'}",
-            )
-        ),
+        name="⭐ Score",
+        value=f"{score}/100" if isinstance(score, int) else "—",
+        inline=True,
     )
+    embed.add_field(
+        name="🎬 Episodes",
+        value=str(media.get("episodes") or "—"),
+        inline=True,
+    )
+    embed.add_field(
+        name="📡 Status",
+        value=_label(media.get("status")),
+        inline=True,
+    )
+
+    footer = [_label(media.get("format"))]
     genres = media.get("genres")
     if isinstance(genres, list) and genres:
-        embed.add_field(name="Genres", value=", ".join(map(str, genres))[:1024])
+        footer.extend(map(str, genres))
+    embed.set_footer(text=" • ".join(footer)[:2048])
 
     cover = media.get("coverImage")
     cover_url = cover.get("large") if isinstance(cover, dict) else None
     if isinstance(cover_url, str):
         embed.set_thumbnail(url=cover_url)
-        embed.add_field(
-            name="Artwork", value=f"[Open cover image]({cover_url})", inline=False
-        )
     embed.set_author(name="AniList", url="https://anilist.co/")
     return embed
 
