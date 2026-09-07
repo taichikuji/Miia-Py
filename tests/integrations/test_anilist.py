@@ -50,6 +50,58 @@ def _make_interaction():
     )
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("search_type", "document", "result_field", "variables", "result"),
+    [
+        (
+            "ANIME",
+            anilist.MEDIA_SEARCH,
+            "media",
+            {"search": "Berserk", "perPage": 3, "type": "ANIME"},
+            MANGA,
+        ),
+        (
+            "MANGA",
+            anilist.MEDIA_SEARCH,
+            "media",
+            {"search": "Berserk", "perPage": 3, "type": "MANGA"},
+            MANGA,
+        ),
+        (
+            "CHARACTER",
+            anilist.CHARACTER_SEARCH,
+            "characters",
+            {"search": "Berserk", "perPage": 3},
+            CHARACTER,
+        ),
+    ],
+)
+async def test_search_results_selects_document_variables_and_collection(
+    monkeypatch, search_type, document, result_field, variables, result
+):
+    request = AsyncMock(return_value={"data": {"Page": {result_field: [result]}}})
+    monkeypatch.setattr(anilist, "_request", request)
+    session = object()
+
+    assert await anilist._search_results(session, "Berserk", search_type, 3) == [result]
+    request.assert_awaited_once_with(session, document, variables)
+
+
+@pytest.mark.asyncio
+async def test_public_search_helpers_keep_first_result_contract(monkeypatch):
+    search = AsyncMock(side_effect=[[MANGA, {"id": 2}], [CHARACTER, {"id": 3}]])
+    monkeypatch.setattr(anilist, "_search_results", search)
+    session = object()
+
+    assert await anilist.search_media(session, " Berserk ", "MANGA") is MANGA
+    assert await anilist.search_character(session, " Luffy ") is CHARACTER
+    assert search.await_args_list == [
+        ((session, "Berserk", "MANGA", 1),),
+        ((session, "Luffy", "CHARACTER", 1),),
+    ]
+
+
 def test_manga_embed_uses_horizontal_manga_details():
     embed = anilist.media_embed(MANGA, "MANGA", 0x123456)
 
@@ -218,7 +270,7 @@ async def test_autocomplete_reuses_prefix_and_seeds_selected_result_cache(monkey
     }
     cog = _make_cog()
     search = AsyncMock(return_value=[MANGA, second])
-    monkeypatch.setattr(anilist, "_search_media_results", search)
+    monkeypatch.setattr(anilist, "_search_results", search)
     interaction = SimpleNamespace(command=SimpleNamespace(name="manga"))
 
     choices = await cog.search_query_autocomplete(interaction, "ber")
@@ -261,7 +313,7 @@ async def test_character_autocomplete_fails_gracefully():
 @pytest.mark.asyncio
 async def test_character_search_reuses_shared_cache(monkeypatch):
     search = AsyncMock(return_value=[CHARACTER])
-    monkeypatch.setattr(anilist, "_search_character_results", search)
+    monkeypatch.setattr(anilist, "_search_results", search)
     cog = _make_cog()
 
     assert await cog._cached_search("Monkey D. Luffy", "CHARACTER") == (
@@ -272,7 +324,7 @@ async def test_character_search_reuses_shared_cache(monkeypatch):
         [CHARACTER],
         True,
     )
-    search.assert_awaited_once_with(cog.bot.session, "Monkey D. Luffy")
+    search.assert_awaited_once_with(cog.bot.session, "Monkey D. Luffy", "CHARACTER")
 
 
 @pytest.mark.asyncio
@@ -285,7 +337,7 @@ async def test_cache_normalizes_queries_and_keeps_empty_results(monkeypatch):
         return [] if len(calls) == 1 else [{"id": 1}]
 
     monkeypatch.setattr(anilist, "monotonic", lambda: now[0])
-    monkeypatch.setattr(anilist, "_search_media_results", search)
+    monkeypatch.setattr(anilist, "_search_results", search)
     cog = _make_cog()
 
     assert await cog._cached_search("Cowboy  Bebop", "ANIME") == ([], False)
@@ -311,7 +363,7 @@ async def test_cache_coalesces_concurrent_equivalent_searches(monkeypatch):
         await release.wait()
         return result
 
-    monkeypatch.setattr(anilist, "_search_media_results", search)
+    monkeypatch.setattr(anilist, "_search_results", search)
     cog = _make_cog()
 
     first = asyncio.create_task(cog._cached_search("Frieren", "ANIME"))
@@ -339,7 +391,7 @@ async def test_cache_does_not_store_failures(monkeypatch):
             raise anilist.AniListError("unavailable", 503)
         return result
 
-    monkeypatch.setattr(anilist, "_search_media_results", search)
+    monkeypatch.setattr(anilist, "_search_results", search)
     cog = _make_cog()
 
     with pytest.raises(anilist.AniListError):
@@ -353,7 +405,7 @@ async def test_cache_stays_bounded(monkeypatch):
     monkeypatch.setattr(anilist, "monotonic", lambda: 0.0)
     monkeypatch.setattr(
         anilist,
-        "_search_media_results",
+        "_search_results",
         lambda *_args: asyncio.sleep(0, result=[{"id": 999}]),
     )
     cog = _make_cog()
