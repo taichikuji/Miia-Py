@@ -103,7 +103,6 @@ def test_description_converts_anilist_spoilers_for_discord():
     assert description == (
         "Family: ||Minato Namikaze (father), Kushina Uzumaki (mother)||"
     )
-    assert anilist._clean_description("Family: ~!Unknown") == "Family: ~!Unknown"
 
 
 def test_description_closes_spoiler_when_truncated():

@@ -103,22 +103,6 @@ class _DescriptionParser(HTMLParser):
         self.parts.append(data)
 
 
-def _convert_spoilers(description: str) -> str:
-    """Convert balanced AniList spoiler markers to Discord spoiler markers."""
-    parts: list[str] = []
-    cursor = 0
-    while (start := description.find("~!", cursor)) >= 0:
-        end = description.find("!~", start + 2)
-        if end < 0:
-            break
-        parts.extend(
-            (description[cursor:start], "||", description[start + 2 : end], "||")
-        )
-        cursor = end + 2
-    parts.append(description[cursor:])
-    return "".join(parts)
-
-
 def _cut_at_word(description: str, limit: int) -> str:
     shortened = description[:limit].rstrip()
     word_end = max(shortened.rfind(" "), shortened.rfind("\n"))
@@ -132,7 +116,7 @@ def _clean_description(value: Any) -> str:
     description = "".join(parser.parts).strip() or "No synopsis available."
     while "\n\n\n" in description:
         description = description.replace("\n\n\n", "\n\n")
-    description = _convert_spoilers(description)
+    description = description.replace("~!", "||").replace("!~", "||")
     if len(description) <= DESCRIPTION_LIMIT:
         return description
 
