@@ -15,6 +15,7 @@ MANGA = {
     "siteUrl": "https://anilist.co/manga/30002",
     "description": "A lone swordsman seeks revenge.<br><br>(Source: Dark Horse)",
     "coverImage": {"large": "https://example.test/berserk.jpg"},
+    "bannerImage": "https://example.test/berserk-banner.jpg",
     "format": "MANGA",
     "status": "FINISHED",
     "chapters": 380,
@@ -48,6 +49,7 @@ def test_manga_embed_uses_horizontal_manga_details():
     ]
     assert embed.footer.text == "Manga • Finished • Action • Drama • Fantasy"
     assert embed.thumbnail.url == MANGA["coverImage"]["large"]
+    assert embed.image.url == MANGA["bannerImage"]
 
 
 @pytest.mark.asyncio

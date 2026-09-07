@@ -44,6 +44,7 @@ query ($search: String!, $type: MediaType!) {
       siteUrl
       description(asHtml: false)
       coverImage { large }
+      bannerImage
       format
       status
       episodes
@@ -170,6 +171,9 @@ def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Emb
     cover_url = cover.get("large") if isinstance(cover, dict) else None
     if isinstance(cover_url, str):
         embed.set_thumbnail(url=cover_url)
+    banner_url = media.get("bannerImage")
+    if isinstance(banner_url, str):
+        embed.set_image(url=banner_url)
     embed.set_author(name="AniList", url="https://anilist.co/")
     return embed
 
