@@ -13,7 +13,10 @@ from extensions.integrations import anilist
 MANGA = {
     "title": {"romaji": "Berserk", "english": "Berserk"},
     "siteUrl": "https://anilist.co/manga/30002",
-    "description": "A lone swordsman seeks revenge.<br><br>(Source: Dark Horse)",
+    "description": (
+        "A lone swordsman seeks revenge.<br><br>(Source: Dark Horse)"
+        "<br><br><i>Notes:</i><br>Still publishing."
+    ),
     "coverImage": {"large": "https://example.test/berserk.jpg"},
     "bannerImage": "https://example.test/berserk-banner.jpg",
     "format": "MANGA",
@@ -42,12 +45,14 @@ def test_manga_embed_uses_horizontal_manga_details():
     assert embed.title == "Berserk"
     assert embed.url == MANGA["siteUrl"]
     assert "<br>" not in embed.description
+    assert "<i>" not in embed.description
+    assert "Notes:" in embed.description
     assert [(field.name, field.value) for field in embed.fields] == [
         ("⭐ Score", "90/100"),
-        ("📖 Chapters", "380"),
-        ("📚 Volumes", "42"),
+        ("📚 Ch / Vol", "380 / 42"),
+        ("📡 Status", "Finished"),
     ]
-    assert embed.footer.text == "Manga • Finished • Action • Drama • Fantasy"
+    assert embed.footer.text == "Manga • Action • Drama • Fantasy"
     assert embed.thumbnail.url == MANGA["coverImage"]["large"]
     assert embed.image.url == MANGA["bannerImage"]
 
@@ -64,7 +69,18 @@ async def test_manga_command_uses_shared_search_path():
     cog._cached_search.assert_awaited_once_with("Berserk", "MANGA")
     embed = interaction.followup.send.await_args.kwargs["embed"]
     assert embed.title == "Berserk"
-    assert embed.fields[1].name == "📖 Chapters"
+    assert embed.fields[1].name == "📚 Ch / Vol"
+
+
+def test_media_embed_truncates_description_at_word_boundary():
+    media = {**MANGA, "description": "word " * 200}
+
+    description = anilist.media_embed(media, "MANGA", 0x123456).description
+
+    assert description is not None
+    assert len(description) <= anilist.DESCRIPTION_LIMIT
+    assert description.endswith("…")
+    assert description.removesuffix("…").split()[-1] == "word"
 
 
 @pytest.mark.asyncio

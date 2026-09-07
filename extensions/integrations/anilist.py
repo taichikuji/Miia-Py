@@ -2,6 +2,7 @@
 
 import logging
 from asyncio import Lock
+from html.parser import HTMLParser
 from time import monotonic
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -35,6 +36,7 @@ MediaType = Literal["ANIME", "MANGA"]
 # Prefer slightly stale public catalogue data over avoidable upstream traffic.
 CACHE_TTL_SECONDS = 15 * 60
 CACHE_LIMIT = 256
+DESCRIPTION_LIMIT = 500
 
 MEDIA_SEARCH = """
 query ($search: String!, $type: MediaType!) {
@@ -64,6 +66,43 @@ class AniListError(Exception):
     def __init__(self, message: str, status: int | None = None) -> None:
         self.status = status
         super().__init__(message)
+
+
+class _DescriptionParser(HTMLParser):
+    """Turn AniList's lightweight description HTML into Discord-safe text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "br":
+            self.parts.append("\n")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_data(self, data: str) -> None:
+        if self.parts and self.parts[-1].endswith("\n") and data.startswith("\n"):
+            data = data[1:]
+        self.parts.append(data)
+
+
+def _clean_description(value: Any) -> str:
+    parser = _DescriptionParser()
+    parser.feed(str(value or "No synopsis available."))
+    parser.close()
+    description = "".join(parser.parts).strip() or "No synopsis available."
+    while "\n\n\n" in description:
+        description = description.replace("\n\n\n", "\n\n")
+    if len(description) <= DESCRIPTION_LIMIT:
+        return description
+
+    shortened = description[: DESCRIPTION_LIMIT - 1].rstrip()
+    word_end = max(shortened.rfind(" "), shortened.rfind("\n"))
+    if word_end > 0:
+        shortened = shortened[:word_end].rstrip()
+    return f"{shortened}…"
 
 
 async def search_media(
@@ -125,13 +164,7 @@ def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Emb
         or titles.get("native")
         or f"Unknown {media_type.lower()}"
     )
-    description = str(media.get("description") or "No synopsis available.").strip()
-    for break_tag in ("<br>", "<br/>", "<br />"):
-        description = description.replace(break_tag, "\n")
-    while "\n\n\n" in description:
-        description = description.replace("\n\n\n", "\n\n")
-    if len(description) > 1000:
-        description = f"{description[:999].rstrip()}…"
+    description = _clean_description(media.get("description"))
 
     site_url = media.get("siteUrl")
     embed = Embed(
@@ -152,16 +185,17 @@ def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Emb
     else:
         metrics.extend(
             (
-                ("📖 Chapters", str(media.get("chapters") or "—")),
-                ("📚 Volumes", str(media.get("volumes") or "—")),
+                (
+                    "📚 Ch / Vol",
+                    f"{media.get('chapters') or '—'} / {media.get('volumes') or '—'}",
+                ),
+                ("📡 Status", _label(media.get("status"))),
             )
         )
     for name, value in metrics:
         embed.add_field(name=name, value=value, inline=True)
 
     footer = [_label(media.get("format"))]
-    if media_type == "MANGA":
-        footer.append(_label(media.get("status")))
     genres = media.get("genres")
     if isinstance(genres, list) and genres:
         footer.extend(map(str, genres))
