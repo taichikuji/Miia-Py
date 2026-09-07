@@ -271,7 +271,8 @@ class MusicCog(commands.Cog):
 
     async def resolve_source(self, query: str) -> dict:
         """Reuse yt-dlp results until their signed stream URL expires."""
-        key = query.strip() if self._is_url(query) else query.strip().casefold()
+        is_url = self._is_url(query)
+        key = query.strip() if is_url else query.strip().casefold()
         if (cached := self.source_cache.get(key)) and cached[0] > time():
             return cached[1]
 
@@ -284,7 +285,7 @@ class MusicCog(commands.Cog):
             info = await lookup
         finally:
             self.source_lookups.pop(key, None)
-        is_playlist = self._is_url(query) and info.get("_type") in [
+        is_playlist = is_url and info.get("_type") in [
             "playlist",
             "multi_video",
         ]
@@ -397,7 +398,7 @@ class MusicCog(commands.Cog):
                 continue
         return items
 
-    async def cog_unload(self):
+    def cog_unload(self) -> None:
         # In-flight lookups and queued tracks must not refill an unloaded cache.
         self.cache_enabled = False
         self.source_cache.clear()

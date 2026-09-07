@@ -237,7 +237,7 @@ async def test_music_unload_preserves_shared_radio_session():
     radio = RadioCog(bot)
     _add_session(music.engine, DummyVoiceClient())
 
-    await music.cog_unload()
+    music.cog_unload()
 
     assert radio.engine is music.engine
     assert radio.engine.is_connected(1)
@@ -1399,7 +1399,7 @@ async def test_unload_cancels_expiry_and_prevents_cache_refill(monkeypatch):
     cog.search_source = lambda _query: {"url": "stream"}
     await cog.resolve_source("track")
     timer = cog.cache_expiry
-    await cog.cog_unload()
+    cog.cog_unload()
     assert timer.cancelled()
     await cog.resolve_source("queued track")
     assert cog.source_cache == {}
