@@ -325,7 +325,7 @@ def media_embed(
     banner_url = media.get("bannerImage")
     if isinstance(banner_url, str):
         embed.set_image(url=banner_url)
-    author = "AniList • Cached" if cached else "AniList"
+    author = "AniList • Cache Hit" if cached else "AniList"
     embed.set_author(name=author, url="https://anilist.co/")
     return embed
 
@@ -367,7 +367,7 @@ def character_embed(
     image_url = image.get("large") if isinstance(image, dict) else None
     if isinstance(image_url, str):
         embed.set_thumbnail(url=image_url)
-    author = "AniList • Cached" if cached else "AniList"
+    author = "AniList • Cache Hit" if cached else "AniList"
     embed.set_author(name=author, url="https://anilist.co/")
     return embed
 
@@ -421,7 +421,7 @@ def user_embed(user: dict[str, Any], color: int, *, cached: bool = False) -> Emb
     banner_url = user.get("bannerImage")
     if isinstance(banner_url, str):
         embed.set_image(url=banner_url)
-    author = "AniList • Cached" if cached else "AniList"
+    author = "AniList • Cache Hit" if cached else "AniList"
     embed.set_author(name=author, url="https://anilist.co/")
     return embed
 
