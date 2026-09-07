@@ -37,6 +37,19 @@ CHARACTER = {
     "favourites": 123456,
 }
 
+USER = {
+    "name": "Taiga",
+    "siteUrl": "https://anilist.co/user/Taiga",
+    "about": "Anime and manga fan.<br><br><i>Hello!</i>",
+    "avatar": {"large": "https://example.test/taiga-avatar.jpg"},
+    "bannerImage": "https://example.test/taiga-banner.jpg",
+    "createdAt": 1609459200,
+    "statistics": {
+        "anime": {"count": 321, "episodesWatched": 4567},
+        "manga": {"count": 89, "chaptersRead": 12345},
+    },
+}
+
 
 def _make_cog():
     return anilist.AniListCog(SimpleNamespace(session=object(), color=0x123456))
@@ -74,6 +87,13 @@ def _make_interaction():
             "characters",
             {"search": "Berserk", "perPage": 3},
             CHARACTER,
+        ),
+        (
+            "USER",
+            anilist.USER_SEARCH,
+            "users",
+            {"search": "Berserk", "perPage": 3},
+            USER,
         ),
     ],
 )
@@ -181,6 +201,37 @@ def test_character_embed_uses_character_details():
     assert embed.footer.text == "Character • モンキー・D・ルフィ"
     assert embed.thumbnail.url == CHARACTER["image"]["large"]
     assert embed.author.name == "AniList • Cached"
+
+
+def test_user_embed_uses_public_profile_details():
+    embed = anilist.user_embed(USER, 0x123456, cached=True)
+
+    assert embed.title == "Taiga"
+    assert embed.url == USER["siteUrl"]
+    assert embed.description == "Anime and manga fan.\n\nHello!"
+    assert [(field.name, field.value) for field in embed.fields] == [
+        ("📺 Anime", "321 entries\n4,567 episodes"),
+        ("📚 Manga", "89 entries\n12,345 chapters"),
+        ("📅 Joined", "<t:1609459200:D>"),
+    ]
+    assert embed.thumbnail.url == USER["avatar"]["large"]
+    assert embed.image.url == USER["bannerImage"]
+    assert embed.author.name == "AniList • Cached"
+
+
+@pytest.mark.asyncio
+async def test_user_command_uses_shared_search_path():
+    cog = _make_cog()
+    cog._cached_search = AsyncMock(return_value=([USER], False))
+    interaction = _make_interaction()
+
+    await anilist.AniListCog.user.callback(cog, interaction, " Taiga ")
+
+    interaction.response.defer.assert_awaited_once_with()
+    cog._cached_search.assert_awaited_once_with("Taiga", "USER")
+    embed = interaction.followup.send.await_args.kwargs["embed"]
+    assert embed.title == "Taiga"
+    assert embed.author.name == "AniList"
 
 
 @pytest.mark.asyncio
@@ -299,6 +350,19 @@ async def test_autocomplete_skips_short_queries_and_missing_session():
     cog.bot.session = None
     assert await cog.search_query_autocomplete(interaction, "Cowboy Bebop") == []
     cog._cached_search.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_user_autocomplete_returns_profile_names(monkeypatch):
+    cog = _make_cog()
+    search = AsyncMock(return_value=[USER])
+    monkeypatch.setattr(anilist, "_search_results", search)
+    interaction = SimpleNamespace(command=SimpleNamespace(name="user"))
+
+    choices = await cog.search_query_autocomplete(interaction, "Tai")
+
+    assert [(choice.name, choice.value) for choice in choices] == [("Taiga", "Taiga")]
+    search.assert_awaited_once_with(cog.bot.session, "Tai", "USER")
 
 
 @pytest.mark.asyncio

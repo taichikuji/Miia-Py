@@ -33,7 +33,7 @@ if LOCAL_TEST_HEADERS:
 
 ANILIST_URL = "https://graphql.anilist.co"
 MediaType = Literal["ANIME", "MANGA"]
-SearchType = Literal["ANIME", "MANGA", "CHARACTER"]
+SearchType = Literal["ANIME", "MANGA", "CHARACTER", "USER"]
 
 # ANILIST REQUEST POLICY
 # AniList is a shared, rate-limited service currently operating with reduced capacity.
@@ -90,6 +90,25 @@ query ($search: String!, $perPage: Int!) {
 }
 """
 
+USER_SEARCH = """
+query ($search: String!, $perPage: Int!) {
+  Page(page: 1, perPage: $perPage) {
+    users(search: $search) {
+      name
+      siteUrl
+      about(asHtml: false)
+      avatar { large }
+      bannerImage
+      createdAt
+      statistics {
+        anime { count episodesWatched }
+        manga { count chaptersRead }
+      }
+    }
+  }
+}
+"""
+
 
 class AniListError(Exception):
     """AniList could not return a usable response."""
@@ -125,11 +144,11 @@ def _cut_at_word(description: str, limit: int) -> str:
     return shortened[:word_end].rstrip() if word_end > 0 else shortened
 
 
-def _clean_description(value: Any) -> str:
+def _clean_description(value: Any, fallback: str = "No synopsis available.") -> str:
     parser = _DescriptionParser()
-    parser.feed(str(value or "No synopsis available."))
+    parser.feed(str(value or fallback))
     parser.close()
-    description = "".join(parser.parts).strip() or "No synopsis available."
+    description = "".join(parser.parts).strip() or fallback
     while "\n\n\n" in description:
         description = description.replace("\n\n\n", "\n\n")
     description = description.replace("~!", "||").replace("!~", "||")
@@ -188,11 +207,13 @@ async def _search_results(
     search_type: SearchType,
     limit: int = SEARCH_RESULT_LIMIT,
 ) -> list[dict[str, Any]]:
-    # AniList permits only one result collection in each Page query. Keep the media and
-    # character documents distinct while sharing their transport and response parsing.
+    # AniList permits only one result collection in each Page query. Keep the documents
+    # distinct while sharing their transport and response parsing.
     variables: dict[str, Any] = {"search": query, "perPage": limit}
     if search_type == "CHARACTER":
         document, result_field = CHARACTER_SEARCH, "characters"
+    elif search_type == "USER":
+        document, result_field = USER_SEARCH, "users"
     else:
         document, result_field = MEDIA_SEARCH, "media"
         variables["type"] = search_type
@@ -229,6 +250,9 @@ def _label(value: Any) -> str:
 
 
 def _result_names(result: dict[str, Any], search_type: SearchType) -> list[str]:
+    if search_type == "USER":
+        name = result.get("name")
+        return [str(name).strip()] if name else []
     names = result.get("name" if search_type == "CHARACTER" else "title")
     if not isinstance(names, dict):
         return []
@@ -348,9 +372,65 @@ def character_embed(
     return embed
 
 
+def user_embed(user: dict[str, Any], color: int, *, cached: bool = False) -> Embed:
+    """Build a linked overview of one AniList user's public profile."""
+    name = str(user.get("name") or "Unknown user")
+    site_url = user.get("siteUrl")
+    embed = Embed(
+        title=name[:256],
+        url=site_url if isinstance(site_url, str) else None,
+        description=_clean_description(user.get("about"), "No profile bio available."),
+        color=color,
+    )
+
+    statistics = user.get("statistics")
+    if not isinstance(statistics, dict):
+        statistics = {}
+    categories = (
+        ("📺 Anime", statistics.get("anime"), "episodesWatched", "episodes"),
+        ("📚 Manga", statistics.get("manga"), "chaptersRead", "chapters"),
+    )
+    for label, values, progress_key, progress_label in categories:
+        if not isinstance(values, dict):
+            values = {}
+        count = values.get("count")
+        progress = values.get(progress_key)
+        embed.add_field(
+            name=label,
+            value=(f"{count:,} entries\n" if isinstance(count, int) else "— entries\n")
+            + (
+                f"{progress:,} {progress_label}"
+                if isinstance(progress, int)
+                else f"— {progress_label}"
+            ),
+            inline=True,
+        )
+
+    created_at = user.get("createdAt")
+    embed.add_field(
+        name="📅 Joined",
+        value=f"<t:{created_at}:D>" if isinstance(created_at, int) else "—",
+        inline=True,
+    )
+    embed.set_footer(text="AniList user profile")
+
+    avatar = user.get("avatar")
+    avatar_url = avatar.get("large") if isinstance(avatar, dict) else None
+    if isinstance(avatar_url, str):
+        embed.set_thumbnail(url=avatar_url)
+    banner_url = user.get("bannerImage")
+    if isinstance(banner_url, str):
+        embed.set_image(url=banner_url)
+    author = "AniList • Cached" if cached else "AniList"
+    embed.set_author(name=author, url="https://anilist.co/")
+    return embed
+
+
 def result_embed(
     result: dict[str, Any], search_type: SearchType, color: int, *, cached: bool
 ) -> Embed:
+    if search_type == "USER":
+        return user_embed(result, color, cached=cached)
     return (
         character_embed(result, color, cached=cached)
         if search_type == "CHARACTER"
@@ -487,6 +567,7 @@ class AniListCog(commands.Cog):
             "anime": "ANIME",
             "manga": "MANGA",
             "character": "CHARACTER",
+            "user": "USER",
         }.get(command_name)
         if (
             len(query) < AUTOCOMPLETE_MIN_LENGTH
@@ -580,13 +661,19 @@ class AniListCog(commands.Cog):
     async def character(self, interaction: Interaction, query: str) -> None:
         await self._search_command(interaction, query, "CHARACTER")
 
+    @app_commands.command(name="user", description="Search for an AniList user.")
+    @app_commands.describe(query="AniList username to search for.")
+    @app_commands.autocomplete(query=search_query_autocomplete)
+    async def user(self, interaction: Interaction, query: str) -> None:
+        await self._search_command(interaction, query, "USER")
+
     async def _search_command(
         self, interaction: Interaction, query: str, search_type: SearchType
     ) -> None:
         label = search_type.lower()
         query = query.strip()
         if not query:
-            query_kind = "name" if search_type == "CHARACTER" else "title"
+            query_kind = "title" if search_type in ("ANIME", "MANGA") else "name"
             await interaction.response.send_message(
                 f":x: Enter a {label} {query_kind} to search for.", ephemeral=True
             )
