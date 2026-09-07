@@ -1,6 +1,8 @@
 """Discord command for searching anime on AniList."""
 
 import logging
+from asyncio import Lock
+from time import monotonic
 from typing import TYPE_CHECKING, Any, Literal
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
@@ -14,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 ANILIST_URL = "https://graphql.anilist.co"
 MediaType = Literal["ANIME", "MANGA"]
+
+# ANILIST REQUEST POLICY
+# AniList is a shared, rate-limited service currently operating with reduced capacity.
+# Every new command must reuse cached reads, coalesce equivalent requests, request only
+# fields it displays, and avoid retries during outages or rate limits. Pagination must
+# cache fetched pages instead of requesting them again when users navigate backwards.
+# Prefer slightly stale public catalogue data over avoidable upstream traffic.
+CACHE_TTL_SECONDS = 15 * 60
+CACHE_LIMIT = 256
+
 MEDIA_SEARCH = """
 query ($search: String!, $type: MediaType!) {
   Page(page: 1, perPage: 1) {
@@ -150,6 +162,32 @@ class AniListCog(commands.Cog):
 
     def __init__(self, bot: Sakamoto) -> None:
         self.bot = bot
+        self.search_cache: dict[
+            tuple[MediaType, str], tuple[float, dict[str, Any] | None]
+        ] = {}
+        self.search_lock = Lock()
+
+    async def _cached_search(
+        self, title: str, media_type: MediaType
+    ) -> dict[str, Any] | None:
+        key = (media_type, " ".join(title.casefold().split()))
+        if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
+            return cached[1]
+
+        async with self.search_lock:
+            if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
+                return cached[1]
+            media = await search_media(self.bot.session, title, media_type)
+            now = monotonic()
+            self.search_cache = {
+                cache_key: value
+                for cache_key, value in self.search_cache.items()
+                if value[0] > now
+            }
+            while len(self.search_cache) >= CACHE_LIMIT:
+                self.search_cache.pop(next(iter(self.search_cache)))
+            self.search_cache[key] = (now + CACHE_TTL_SECONDS, media)
+            return media
 
     @app_commands.command(name="anime", description="Search AniList for an anime.")
     @app_commands.describe(query="Anime title to search for.")
@@ -169,7 +207,7 @@ class AniListCog(commands.Cog):
 
         await interaction.response.defer()
         try:
-            media = await search_media(self.bot.session, query, "ANIME")
+            media = await self._cached_search(query, "ANIME")
         except AniListError as error:
             logger.warning("AniList anime search failed with status %s", error.status)
             message = (
