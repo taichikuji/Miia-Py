@@ -980,6 +980,26 @@ async def test_source_cache_stops_at_256_keys(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_source_cache_discards_expired_entries_before_valid_entries(monkeypatch):
+    cog = MusicCog(_make_bot())
+    expires_at = int(time()) + 3600
+    for index in range(255):
+        cog.source_cache[f"valid {index}"] = (expires_at, {})
+    cog.source_cache["expired"] = (time() - 1, {})
+    cog.search_source = MagicMock(
+        return_value={"url": f"https://stream.test/new?expire={expires_at}"}
+    )
+    monkeypatch.setattr("extensions.audio.music.get_running_loop", ImmediateLoop)
+
+    await cog.resolve_source("Track")
+
+    assert len(cog.source_cache) == 256
+    assert "expired" not in cog.source_cache
+    assert "valid 0" not in cog.source_cache
+    assert "valid 1" in cog.source_cache
+
+
+@pytest.mark.asyncio
 async def test_resolve_source_refreshes_an_expired_stream_url(monkeypatch):
     cog = MusicCog(_make_bot())
     expired = {"url": f"https://stream.test/audio?expire={int(time()) - 1}"}
