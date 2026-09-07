@@ -9,10 +9,20 @@ from aiohttp import ClientError, ClientSession, ClientTimeout
 from discord import Embed, Interaction, app_commands
 from discord.ext import commands
 
+try:
+    from ._anilist_test_headers import HEADERS as LOCAL_TEST_HEADERS
+except ModuleNotFoundError:
+    LOCAL_TEST_HEADERS = None
+
 if TYPE_CHECKING:
     from main import Sakamoto
 
 logger = logging.getLogger(__name__)
+
+if LOCAL_TEST_HEADERS:
+    logger.warning(
+        "Using local AniList test headers; do not deploy this configuration."
+    )
 
 ANILIST_URL = "https://graphql.anilist.co"
 MediaType = Literal["ANIME", "MANGA"]
@@ -68,6 +78,7 @@ async def search_media(
                 "query": MEDIA_SEARCH,
                 "variables": {"search": title, "type": media_type},
             },
+            headers=LOCAL_TEST_HEADERS,
             timeout=ClientTimeout(total=10),
         ) as response:
             if not 200 <= response.status < 300:
