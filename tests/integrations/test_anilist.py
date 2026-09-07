@@ -208,6 +208,57 @@ async def test_pagination_rejects_other_users():
 
 
 @pytest.mark.asyncio
+async def test_autocomplete_reuses_prefix_and_seeds_selected_result_cache(monkeypatch):
+    second = {
+        **MANGA,
+        "title": {
+            "romaji": "Berserk: Ougon Jidai-hen",
+            "english": "Berserk: The Golden Age Arc",
+        },
+    }
+    cog = _make_cog()
+    search = AsyncMock(return_value=[MANGA, second])
+    monkeypatch.setattr(anilist, "_search_media_results", search)
+    interaction = SimpleNamespace(command=SimpleNamespace(name="manga"))
+
+    choices = await cog.search_query_autocomplete(interaction, "ber")
+    narrowed = await cog.search_query_autocomplete(interaction, "bers")
+
+    assert [choice.name for choice in choices] == [
+        "Berserk",
+        "Berserk: Ougon Jidai-hen",
+    ]
+    assert [choice.name for choice in narrowed] == [
+        "Berserk",
+        "Berserk: Ougon Jidai-hen",
+    ]
+    result, cached = await cog._cached_search(choices[0].value, "MANGA")
+    assert (result, cached) == ([MANGA], True)
+    search.assert_awaited_once_with(cog.bot.session, "ber", "MANGA")
+
+
+@pytest.mark.asyncio
+async def test_autocomplete_skips_short_queries_and_missing_session():
+    cog = _make_cog()
+    cog._cached_search = AsyncMock()
+    interaction = SimpleNamespace(command=SimpleNamespace(name="anime"))
+
+    assert await cog.search_query_autocomplete(interaction, "ab") == []
+    cog.bot.session = None
+    assert await cog.search_query_autocomplete(interaction, "Cowboy Bebop") == []
+    cog._cached_search.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_character_autocomplete_fails_gracefully():
+    cog = _make_cog()
+    cog._cached_search = AsyncMock(side_effect=anilist.AniListError("unavailable", 503))
+    interaction = SimpleNamespace(command=SimpleNamespace(name="character"))
+
+    assert await cog.search_query_autocomplete(interaction, "Luffy") == []
+
+
+@pytest.mark.asyncio
 async def test_character_search_reuses_shared_cache(monkeypatch):
     search = AsyncMock(return_value=[CHARACTER])
     monkeypatch.setattr(anilist, "_search_character_results", search)

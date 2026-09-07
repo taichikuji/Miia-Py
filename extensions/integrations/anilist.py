@@ -45,6 +45,7 @@ CACHE_TTL_SECONDS = 15 * 60
 CACHE_LIMIT = 256
 DESCRIPTION_LIMIT = 500
 SEARCH_RESULT_LIMIT = 5
+AUTOCOMPLETE_MIN_LENGTH = 3
 
 MEDIA_SEARCH = """
 query ($search: String!, $type: MediaType!, $perPage: Int!) {
@@ -227,6 +228,22 @@ def _label(value: Any) -> str:
         word if word in {"TV", "OVA", "ONA"} else word.title()
         for word in str(value).split("_")
     )
+
+
+def _result_names(result: dict[str, Any], search_type: SearchType) -> list[str]:
+    names = result.get("name" if search_type == "CHARACTER" else "title")
+    if not isinstance(names, dict):
+        return []
+    fields = (
+        ("full", "native")
+        if search_type == "CHARACTER"
+        else (
+            "romaji",
+            "english",
+            "native",
+        )
+    )
+    return [str(names[field]).strip() for field in fields if names.get(field)]
 
 
 def media_embed(
@@ -425,6 +442,27 @@ class AniListCog(commands.Cog):
             tuple[SearchType, str], tuple[float, list[dict[str, Any]]]
         ] = {}
         self.search_lock = Lock()
+        self.autocomplete_lock = Lock()
+
+    def _store_cache(
+        self,
+        key: tuple[SearchType, str],
+        results: list[dict[str, Any]],
+        *,
+        expires_at: float | None = None,
+    ) -> None:
+        now = monotonic()
+        self.search_cache = {
+            cache_key: value
+            for cache_key, value in self.search_cache.items()
+            if value[0] > now and cache_key != key
+        }
+        while len(self.search_cache) >= CACHE_LIMIT:
+            self.search_cache.pop(next(iter(self.search_cache)))
+        self.search_cache[key] = (
+            expires_at if expires_at is not None else now + CACHE_TTL_SECONDS,
+            results,
+        )
 
     async def _cached_search(
         self, query: str, search_type: SearchType
@@ -441,24 +479,98 @@ class AniListCog(commands.Cog):
                 if search_type == "CHARACTER"
                 else await _search_media_results(self.bot.session, query, search_type)
             )
-            now = monotonic()
-            self.search_cache = {
-                cache_key: value
-                for cache_key, value in self.search_cache.items()
-                if value[0] > now
-            }
-            while len(self.search_cache) >= CACHE_LIMIT:
-                self.search_cache.pop(next(iter(self.search_cache)))
-            self.search_cache[key] = (now + CACHE_TTL_SECONDS, result)
+            self._store_cache(key, result)
             return result, False
+
+    async def search_query_autocomplete(
+        self, interaction: Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        query = current.strip()
+        command_name = interaction.command.name if interaction.command else ""
+        search_type = {
+            "anime": "ANIME",
+            "manga": "MANGA",
+            "character": "CHARACTER",
+        }.get(command_name)
+        if (
+            len(query) < AUTOCOMPLETE_MIN_LENGTH
+            or search_type is None
+            or self.bot.session is None
+        ):
+            return []
+
+        normalized = " ".join(query.casefold().split())
+        async with self.autocomplete_lock:
+            now = monotonic()
+            cached_query = ""
+            results: list[dict[str, Any]] | None = None
+            for (result_type, result_query), (
+                expires_at,
+                cached,
+            ) in self.search_cache.items():
+                if (
+                    result_type == search_type
+                    and expires_at > now
+                    and normalized.startswith(result_query)
+                    and len(result_query) > len(cached_query)
+                ):
+                    cached_query = result_query
+                    results = cached
+
+            matches = [
+                result
+                for result in results or []
+                if any(
+                    normalized in " ".join(name.casefold().split())
+                    for name in _result_names(result, search_type)
+                )
+            ]
+            if results is None or (not matches and cached_query != normalized):
+                try:
+                    matches, _ = await self._cached_search(query, search_type)
+                except AniListError as error:
+                    logger.warning(
+                        "AniList %s autocomplete failed with status %s",
+                        search_type.lower(),
+                        error.status,
+                    )
+                    return []
+
+            self._store_cache((search_type, normalized), matches)
+            choices: list[app_commands.Choice[str]] = []
+            seen: set[str] = set()
+            for result in matches:
+                names = _result_names(result, search_type)
+                if not names:
+                    continue
+                name = next(
+                    (
+                        candidate
+                        for candidate in names
+                        if normalized in " ".join(candidate.casefold().split())
+                    ),
+                    names[0],
+                )[:100]
+                if not name or name.casefold() in seen:
+                    continue
+                seen.add(name.casefold())
+                choices.append(app_commands.Choice(name=name, value=name))
+                self._store_cache(
+                    (search_type, " ".join(name.casefold().split())), [result]
+                )
+                if len(choices) == SEARCH_RESULT_LIMIT:
+                    break
+            return choices
 
     @app_commands.command(name="anime", description="Search AniList for an anime.")
     @app_commands.describe(query="Anime title to search for.")
+    @app_commands.autocomplete(query=search_query_autocomplete)
     async def anime(self, interaction: Interaction, query: str) -> None:
         await self._search_command(interaction, query, "ANIME")
 
     @app_commands.command(name="manga", description="Search AniList for a manga.")
     @app_commands.describe(query="Manga title to search for.")
+    @app_commands.autocomplete(query=search_query_autocomplete)
     async def manga(self, interaction: Interaction, query: str) -> None:
         await self._search_command(interaction, query, "MANGA")
 
@@ -466,6 +578,7 @@ class AniListCog(commands.Cog):
         name="character", description="Search AniList for a character."
     )
     @app_commands.describe(query="Character name to search for.")
+    @app_commands.autocomplete(query=search_query_autocomplete)
     async def character(self, interaction: Interaction, query: str) -> None:
         await self._search_command(interaction, query, "CHARACTER")
 
