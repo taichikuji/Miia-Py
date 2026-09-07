@@ -41,6 +41,12 @@ SearchType = Literal["ANIME", "MANGA", "CHARACTER"]
 # fields it displays, and avoid retries during outages or rate limits. Pagination must
 # cache fetched pages instead of requesting them again when users navigate backwards.
 # Prefer slightly stale public catalogue data over avoidable upstream traffic.
+
+# SEARCH WORKFLOW
+# Commands and autocomplete share _cached_search, which sends only cache misses through
+# _search_results and _request. Each response is cached as a small result list that can
+# feed autocomplete, the initial embed, and every pagination button without another
+# AniList request. Discord embeds are built last so the cache stays presentation-free.
 CACHE_TTL_SECONDS = 15 * 60
 CACHE_LIMIT = 256
 DESCRIPTION_LIMIT = 500
@@ -182,6 +188,8 @@ async def _search_results(
     search_type: SearchType,
     limit: int = SEARCH_RESULT_LIMIT,
 ) -> list[dict[str, Any]]:
+    # AniList permits only one result collection in each Page query. Keep the media and
+    # character documents distinct while sharing their transport and response parsing.
     variables: dict[str, Any] = {"search": query, "perPage": limit}
     if search_type == "CHARACTER":
         document, result_field = CHARACTER_SEARCH, "characters"
@@ -461,6 +469,8 @@ class AniListCog(commands.Cog):
         if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
             return cached[1], True
 
+        # Recheck after taking the lock so simultaneous equivalent misses share one
+        # upstream request instead of merely running one after another.
         async with self.search_lock:
             if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
                 return cached[1], True
@@ -541,6 +551,8 @@ class AniListCog(commands.Cog):
                     continue
                 seen.add(name.casefold())
                 choices.append(app_commands.Choice(name=name, value=name))
+                # A selected suggestion should resolve to its exact result from cache,
+                # not cause a second search or reopen the broader suggestion set.
                 self._store_cache(
                     (search_type, " ".join(name.casefold().split())), [result]
                 )
