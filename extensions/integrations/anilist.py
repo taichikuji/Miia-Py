@@ -33,7 +33,7 @@ if LOCAL_TEST_HEADERS:
 
 ANILIST_URL = "https://graphql.anilist.co"
 MediaType = Literal["ANIME", "MANGA"]
-SearchType = Literal["ANIME", "MANGA", "CHARACTER", "USER"]
+SearchType = Literal[MediaType, "CHARACTER", "USER"]
 
 # ANILIST REQUEST POLICY
 # AniList is a shared, rate-limited service currently operating with reduced capacity.
