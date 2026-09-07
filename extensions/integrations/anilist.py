@@ -153,7 +153,9 @@ def _label(value: Any) -> str:
     )
 
 
-def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Embed:
+def media_embed(
+    media: dict[str, Any], media_type: MediaType, color: int, *, cached: bool = False
+) -> Embed:
     """Build a compact, linked embed for one anime or manga result."""
     titles = media.get("title")
     if not isinstance(titles, dict):
@@ -208,7 +210,8 @@ def media_embed(media: dict[str, Any], media_type: MediaType, color: int) -> Emb
     banner_url = media.get("bannerImage")
     if isinstance(banner_url, str):
         embed.set_image(url=banner_url)
-    embed.set_author(name="AniList", url="https://anilist.co/")
+    author = "AniList • Cached" if cached else "AniList"
+    embed.set_author(name=author, url="https://anilist.co/")
     return embed
 
 
@@ -224,14 +227,14 @@ class AniListCog(commands.Cog):
 
     async def _cached_search(
         self, title: str, media_type: MediaType
-    ) -> dict[str, Any] | None:
+    ) -> tuple[dict[str, Any] | None, bool]:
         key = (media_type, " ".join(title.casefold().split()))
         if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
-            return cached[1]
+            return cached[1], True
 
         async with self.search_lock:
             if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
-                return cached[1]
+                return cached[1], True
             media = await search_media(self.bot.session, title, media_type)
             now = monotonic()
             self.search_cache = {
@@ -242,7 +245,7 @@ class AniListCog(commands.Cog):
             while len(self.search_cache) >= CACHE_LIMIT:
                 self.search_cache.pop(next(iter(self.search_cache)))
             self.search_cache[key] = (now + CACHE_TTL_SECONDS, media)
-            return media
+            return media, False
 
     @app_commands.command(name="anime", description="Search AniList for an anime.")
     @app_commands.describe(query="Anime title to search for.")
@@ -273,7 +276,7 @@ class AniListCog(commands.Cog):
 
         await interaction.response.defer()
         try:
-            media = await self._cached_search(query, media_type)
+            media, cached = await self._cached_search(query, media_type)
         except AniListError as error:
             logger.warning(
                 "AniList %s search failed with status %s", label, error.status
@@ -292,7 +295,7 @@ class AniListCog(commands.Cog):
             )
             return
         await interaction.followup.send(
-            embed=media_embed(media, media_type, self.bot.color)
+            embed=media_embed(media, media_type, self.bot.color, cached=cached)
         )
 
 

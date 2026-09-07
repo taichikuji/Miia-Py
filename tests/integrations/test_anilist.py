@@ -55,12 +55,13 @@ def test_manga_embed_uses_horizontal_manga_details():
     assert embed.footer.text == "Manga • Action • Drama • Fantasy"
     assert embed.thumbnail.url == MANGA["coverImage"]["large"]
     assert embed.image.url == MANGA["bannerImage"]
+    assert embed.author.name == "AniList"
 
 
 @pytest.mark.asyncio
 async def test_manga_command_uses_shared_search_path():
     cog = _make_cog()
-    cog._cached_search = AsyncMock(return_value=MANGA)
+    cog._cached_search = AsyncMock(return_value=(MANGA, True))
     interaction = _make_interaction()
 
     await anilist.AniListCog.manga.callback(cog, interaction, " Berserk ")
@@ -70,6 +71,7 @@ async def test_manga_command_uses_shared_search_path():
     embed = interaction.followup.send.await_args.kwargs["embed"]
     assert embed.title == "Berserk"
     assert embed.fields[1].name == "📚 Ch / Vol"
+    assert embed.author.name == "AniList • Cached"
 
 
 def test_media_embed_truncates_description_at_word_boundary():
@@ -96,12 +98,12 @@ async def test_cache_normalizes_queries_and_keeps_empty_results(monkeypatch):
     monkeypatch.setattr(anilist, "search_media", search)
     cog = _make_cog()
 
-    assert await cog._cached_search("Cowboy  Bebop", "ANIME") is None
-    assert await cog._cached_search(" cowboy bebop ", "ANIME") is None
+    assert await cog._cached_search("Cowboy  Bebop", "ANIME") == (None, False)
+    assert await cog._cached_search(" cowboy bebop ", "ANIME") == (None, True)
     assert len(calls) == 1
 
     now[0] = anilist.CACHE_TTL_SECONDS + 1
-    assert await cog._cached_search("cowboy bebop", "ANIME") == {"id": 1}
+    assert await cog._cached_search("cowboy bebop", "ANIME") == ({"id": 1}, False)
     assert len(calls) == 2
 
 
@@ -128,7 +130,10 @@ async def test_cache_coalesces_concurrent_equivalent_searches(monkeypatch):
     await asyncio.sleep(0)
     release.set()
 
-    assert await asyncio.gather(first, second) == [result, result]
+    assert await asyncio.gather(first, second) == [
+        (result, False),
+        (result, True),
+    ]
     assert calls == 1
 
 
@@ -149,7 +154,7 @@ async def test_cache_does_not_store_failures(monkeypatch):
 
     with pytest.raises(anilist.AniListError):
         await cog._cached_search("Frieren", "ANIME")
-    assert await cog._cached_search("Frieren", "ANIME") == result
+    assert await cog._cached_search("Frieren", "ANIME") == (result, False)
     assert calls == 2
 
 
