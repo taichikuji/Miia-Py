@@ -1,5 +1,3 @@
-"""Discord command for searching anime on AniList."""
-
 import logging
 from asyncio import Lock
 from html.parser import HTMLParser
@@ -27,6 +25,7 @@ if LOCAL_TEST_HEADERS:
 
 ANILIST_URL = "https://graphql.anilist.co"
 MediaType = Literal["ANIME", "MANGA"]
+SearchType = Literal["ANIME", "MANGA", "CHARACTER"]
 
 # ANILIST REQUEST POLICY
 # AniList is a shared, rate-limited service currently operating with reduced capacity.
@@ -54,6 +53,22 @@ query ($search: String!, $type: MediaType!) {
       volumes
       averageScore
       genres
+    }
+  }
+}
+"""
+
+CHARACTER_SEARCH = """
+query ($search: String!) {
+  Page(page: 1, perPage: 1) {
+    characters(search: $search) {
+      name { full native }
+      siteUrl
+      description(asHtml: false)
+      image { large }
+      gender
+      age
+      favourites
     }
   }
 }
@@ -153,6 +168,15 @@ async def search_media(
     return _first_page_result(payload, "media")
 
 
+async def search_character(session: ClientSession, name: str) -> dict[str, Any] | None:
+    """Return AniList's first character match for a name."""
+    name = name.strip()
+    if not name:
+        raise ValueError("An AniList character name is required.")
+    payload = await _request(session, CHARACTER_SEARCH, {"search": name})
+    return _first_page_result(payload, "characters")
+
+
 def _label(value: Any) -> str:
     if not value:
         return "—"
@@ -224,27 +248,73 @@ def media_embed(
     return embed
 
 
+def character_embed(
+    character: dict[str, Any], color: int, *, cached: bool = False
+) -> Embed:
+    """Build a compact, linked embed for one character result."""
+    names = character.get("name")
+    if not isinstance(names, dict):
+        names = {}
+    title = names.get("full") or names.get("native") or "Unknown character"
+    site_url = character.get("siteUrl")
+    embed = Embed(
+        title=str(title)[:256],
+        url=site_url if isinstance(site_url, str) else None,
+        description=_clean_description(character.get("description")),
+        color=color,
+    )
+    favourites = character.get("favourites")
+    metrics = (
+        ("⚧ Gender", str(character.get("gender") or "—")),
+        ("🎂 Age", str(character.get("age") or "—")),
+        (
+            "❤️ Favourites",
+            f"{favourites:,}" if isinstance(favourites, int) else "—",
+        ),
+    )
+    for name, value in metrics:
+        embed.add_field(name=name, value=value, inline=True)
+
+    native_name = names.get("native")
+    footer = "Character"
+    if isinstance(native_name, str) and native_name != title:
+        footer = f"{footer} • {native_name}"
+    embed.set_footer(text=footer[:2048])
+
+    image = character.get("image")
+    image_url = image.get("large") if isinstance(image, dict) else None
+    if isinstance(image_url, str):
+        embed.set_thumbnail(url=image_url)
+    author = "AniList • Cached" if cached else "AniList"
+    embed.set_author(name=author, url="https://anilist.co/")
+    return embed
+
+
 class AniListCog(commands.Cog):
     """Search AniList's public catalogue."""
 
     def __init__(self, bot: Sakamoto) -> None:
         self.bot = bot
         self.search_cache: dict[
-            tuple[MediaType, str], tuple[float, dict[str, Any] | None]
+            tuple[SearchType, str], tuple[float, dict[str, Any] | None]
         ] = {}
         self.search_lock = Lock()
 
     async def _cached_search(
-        self, title: str, media_type: MediaType
+        self, query: str, search_type: SearchType
     ) -> tuple[dict[str, Any] | None, bool]:
-        key = (media_type, " ".join(title.casefold().split()))
+        key = (search_type, " ".join(query.casefold().split()))
         if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
             return cached[1], True
 
         async with self.search_lock:
             if (cached := self.search_cache.get(key)) and cached[0] > monotonic():
                 return cached[1], True
-            media = await search_media(self.bot.session, title, media_type)
+            result = (
+                await search_character(self.bot.session, query)
+                if search_type == "CHARACTER"
+                else await search_media(self.bot.session, query, search_type)
+            )
             now = monotonic()
             self.search_cache = {
                 cache_key: value
@@ -253,8 +323,8 @@ class AniListCog(commands.Cog):
             }
             while len(self.search_cache) >= CACHE_LIMIT:
                 self.search_cache.pop(next(iter(self.search_cache)))
-            self.search_cache[key] = (now + CACHE_TTL_SECONDS, media)
-            return media, False
+            self.search_cache[key] = (now + CACHE_TTL_SECONDS, result)
+            return result, False
 
     @app_commands.command(name="anime", description="Search AniList for an anime.")
     @app_commands.describe(query="Anime title to search for.")
@@ -266,14 +336,22 @@ class AniListCog(commands.Cog):
     async def manga(self, interaction: Interaction, query: str) -> None:
         await self._search_command(interaction, query, "MANGA")
 
+    @app_commands.command(
+        name="character", description="Search AniList for a character."
+    )
+    @app_commands.describe(query="Character name to search for.")
+    async def character(self, interaction: Interaction, query: str) -> None:
+        await self._search_command(interaction, query, "CHARACTER")
+
     async def _search_command(
-        self, interaction: Interaction, query: str, media_type: MediaType
+        self, interaction: Interaction, query: str, search_type: SearchType
     ) -> None:
-        label = media_type.lower()
+        label = search_type.lower()
         query = query.strip()
         if not query:
+            query_kind = "name" if search_type == "CHARACTER" else "title"
             await interaction.response.send_message(
-                f":x: Enter a {label} title to search for.", ephemeral=True
+                f":x: Enter a {label} {query_kind} to search for.", ephemeral=True
             )
             return
         if self.bot.session is None:
@@ -285,7 +363,7 @@ class AniListCog(commands.Cog):
 
         await interaction.response.defer()
         try:
-            media, cached = await self._cached_search(query, media_type)
+            result, cached = await self._cached_search(query, search_type)
         except AniListError as error:
             logger.warning(
                 "AniList %s search failed with status %s", label, error.status
@@ -298,14 +376,17 @@ class AniListCog(commands.Cog):
             await interaction.followup.send(message, ephemeral=True)
             return
 
-        if media is None:
+        if result is None:
             await interaction.followup.send(
                 f":mag: No {label} found for `{query}`.", ephemeral=True
             )
             return
-        await interaction.followup.send(
-            embed=media_embed(media, media_type, self.bot.color, cached=cached)
+        embed = (
+            character_embed(result, self.bot.color, cached=cached)
+            if search_type == "CHARACTER"
+            else media_embed(result, search_type, self.bot.color, cached=cached)
         )
+        await interaction.followup.send(embed=embed)
 
 
 async def setup(bot: Sakamoto) -> None:

@@ -27,6 +27,16 @@ MANGA = {
     "genres": ["Action", "Drama", "Fantasy"],
 }
 
+CHARACTER = {
+    "name": {"full": "Monkey D. Luffy", "native": "モンキー・D・ルフィ"},
+    "siteUrl": "https://anilist.co/character/40",
+    "description": "Captain of the Straw Hat Pirates.<br><br><i>Dream:</i> King.",
+    "image": {"large": "https://example.test/luffy.jpg"},
+    "gender": "Male",
+    "age": "19",
+    "favourites": 123456,
+}
+
 
 def _make_cog():
     return anilist.AniListCog(SimpleNamespace(session=object(), color=0x123456))
@@ -83,6 +93,67 @@ def test_media_embed_truncates_description_at_word_boundary():
     assert len(description) <= anilist.DESCRIPTION_LIMIT
     assert description.endswith("…")
     assert description.removesuffix("…").split()[-1] == "word"
+
+
+def test_character_embed_uses_character_details():
+    embed = anilist.character_embed(CHARACTER, 0x123456, cached=True)
+
+    assert embed.title == "Monkey D. Luffy"
+    assert embed.url == CHARACTER["siteUrl"]
+    assert embed.description == "Captain of the Straw Hat Pirates.\n\nDream: King."
+    assert [(field.name, field.value) for field in embed.fields] == [
+        ("⚧ Gender", "Male"),
+        ("🎂 Age", "19"),
+        ("❤️ Favourites", "123,456"),
+    ]
+    assert embed.footer.text == "Character • モンキー・D・ルフィ"
+    assert embed.thumbnail.url == CHARACTER["image"]["large"]
+    assert embed.author.name == "AniList • Cached"
+
+
+@pytest.mark.asyncio
+async def test_character_command_uses_cached_search_path():
+    cog = _make_cog()
+    cog._cached_search = AsyncMock(return_value=(CHARACTER, False))
+    interaction = _make_interaction()
+
+    await anilist.AniListCog.character.callback(cog, interaction, " Luffy ")
+
+    interaction.response.defer.assert_awaited_once_with()
+    cog._cached_search.assert_awaited_once_with("Luffy", "CHARACTER")
+    embed = interaction.followup.send.await_args.kwargs["embed"]
+    assert embed.title == "Monkey D. Luffy"
+    assert embed.author.name == "AniList"
+
+
+@pytest.mark.asyncio
+async def test_character_command_rejects_empty_name():
+    cog = _make_cog()
+    interaction = _make_interaction()
+
+    await anilist.AniListCog.character.callback(cog, interaction, "   ")
+
+    interaction.response.send_message.assert_awaited_once_with(
+        ":x: Enter a character name to search for.", ephemeral=True
+    )
+    interaction.response.defer.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_character_search_reuses_shared_cache(monkeypatch):
+    search = AsyncMock(return_value=CHARACTER)
+    monkeypatch.setattr(anilist, "search_character", search)
+    cog = _make_cog()
+
+    assert await cog._cached_search("Monkey D. Luffy", "CHARACTER") == (
+        CHARACTER,
+        False,
+    )
+    assert await cog._cached_search(" monkey d. luffy ", "CHARACTER") == (
+        CHARACTER,
+        True,
+    )
+    search.assert_awaited_once_with(cog.bot.session, "Monkey D. Luffy")
 
 
 @pytest.mark.asyncio
