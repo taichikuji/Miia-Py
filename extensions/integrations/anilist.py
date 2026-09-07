@@ -105,21 +105,13 @@ def _clean_description(value: Any) -> str:
     return f"{shortened}…"
 
 
-async def search_media(
-    session: ClientSession, title: str, media_type: MediaType
-) -> dict[str, Any] | None:
-    """Return AniList's first safe media match for a title."""
-    title = title.strip()
-    if not title:
-        raise ValueError("An AniList search title is required.")
-
+async def _request(
+    session: ClientSession, query: str, variables: dict[str, str]
+) -> dict[str, Any]:
     try:
         async with session.post(
             ANILIST_URL,
-            json={
-                "query": MEDIA_SEARCH,
-                "variables": {"search": title, "type": media_type},
-            },
+            json={"query": query, "variables": variables},
             headers=LOCAL_TEST_HEADERS,
             timeout=ClientTimeout(total=10),
         ) as response:
@@ -136,12 +128,29 @@ async def search_media(
 
     if not isinstance(payload, dict) or payload.get("errors"):
         raise AniListError("AniList rejected the search.")
+    return payload
+
+
+def _first_page_result(payload: dict[str, Any], field: str) -> dict[str, Any] | None:
     data = payload.get("data")
     page = data.get("Page") if isinstance(data, dict) else None
-    media = page.get("media") if isinstance(page, dict) else None
-    if not isinstance(media, list):
+    results = page.get(field) if isinstance(page, dict) else None
+    if not isinstance(results, list):
         raise AniListError("AniList returned an unexpected response.")
-    return media[0] if media and isinstance(media[0], dict) else None
+    return results[0] if results and isinstance(results[0], dict) else None
+
+
+async def search_media(
+    session: ClientSession, title: str, media_type: MediaType
+) -> dict[str, Any] | None:
+    """Return AniList's first safe media match for a title."""
+    title = title.strip()
+    if not title:
+        raise ValueError("An AniList search title is required.")
+    payload = await _request(
+        session, MEDIA_SEARCH, {"search": title, "type": media_type}
+    )
+    return _first_page_result(payload, "media")
 
 
 def _label(value: Any) -> str:
