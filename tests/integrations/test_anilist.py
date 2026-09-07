@@ -166,7 +166,7 @@ async def test_manga_command_uses_shared_search_path():
     embed = interaction.followup.send.await_args.kwargs["embed"]
     assert embed.title == "Berserk"
     assert embed.fields[1].name == "📚 Ch / Vol"
-    assert embed.author.name == "AniList • Cached"
+    assert embed.author.name == "AniList • Cache Hit"
 
 
 def test_media_embed_truncates_description_at_word_boundary():
@@ -212,7 +212,7 @@ def test_character_embed_uses_character_details():
     ]
     assert embed.footer.text == "Character • モンキー・D・ルフィ"
     assert embed.thumbnail.url == CHARACTER["image"]["large"]
-    assert embed.author.name == "AniList • Cached"
+    assert embed.author.name == "AniList • Cache Hit"
 
 
 def test_user_embed_uses_public_profile_details():
@@ -228,7 +228,7 @@ def test_user_embed_uses_public_profile_details():
     ]
     assert embed.thumbnail.url == USER["avatar"]["large"]
     assert embed.image.url == USER["bannerImage"]
-    assert embed.author.name == "AniList • Cached"
+    assert embed.author.name == "AniList • Cache Hit"
 
 
 @pytest.mark.asyncio
