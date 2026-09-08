@@ -47,7 +47,7 @@ SearchType = Literal[MediaType, "CHARACTER", "USER"]
 # _search_results and _request. Each response is cached as a small result list that can
 # feed autocomplete, the initial embed, and every pagination button without another
 # AniList request. Discord embeds are built last so the cache stays presentation-free.
-CACHE_TTL_SECONDS = 15 * 60
+CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 CACHE_LIMIT = 256
 DESCRIPTION_LIMIT = 500
 SEARCH_RESULT_LIMIT = 5
