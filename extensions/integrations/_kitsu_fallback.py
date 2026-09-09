@@ -22,6 +22,36 @@ class KitsuError(Exception):
         super().__init__(message)
 
 
+def _genre_titles(item: dict[str, Any], payload: dict[str, Any]) -> list[str]:
+    included = payload.get("included")
+    try:
+        references = item["relationships"]["categories"]["data"]
+    except KeyError, TypeError:
+        return []
+    if not isinstance(included, list) or not isinstance(references, list):
+        return []
+
+    categories = {
+        resource.get("id"): resource
+        for resource in included
+        if isinstance(resource, dict)
+        and resource.get("type") == "categories"
+        and resource.get("id") is not None
+    }
+    genres: list[str] = []
+    for reference in references:
+        try:
+            category = categories[reference["id"]]
+            parent_id = category["relationships"]["parent"]["data"]["id"]
+            parent_slug = categories[parent_id]["attributes"]["slug"]
+            title = category["attributes"]["title"]
+        except KeyError, TypeError:
+            continue
+        if parent_slug == "elements" and isinstance(title, str) and title:
+            genres.append(title)
+    return genres
+
+
 async def search_media(
     session: ClientSession,
     query: str,
@@ -33,7 +63,7 @@ async def search_media(
     # Keep fallback payloads limited to fields already displayed by the bot.
     fields = (
         "slug,canonicalTitle,titles,synopsis,posterImage,coverImage,subtype,"
-        "status,averageRating,"
+        "status,averageRating,categories,"
         + ("episodeCount" if media_type == "ANIME" else "chapterCount,volumeCount")
     )
     try:
@@ -43,6 +73,8 @@ async def search_media(
                 "filter[text]": query,
                 "page[limit]": str(limit),
                 f"fields[{resource}]": fields,
+                "include": "categories.parent",
+                "fields[categories]": "title,slug,parent",
             },
             headers={
                 "Accept": "application/vnd.api+json",
@@ -105,6 +137,7 @@ async def search_media(
                 "chapters": attributes.get("chapterCount"),
                 "volumes": attributes.get("volumeCount"),
                 "averageScore": score,
+                "genres": _genre_titles(item, payload),
             }
         )
     # The shared AniList Page parser now handles responses from either provider.

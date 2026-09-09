@@ -48,7 +48,46 @@ async def test_search_media_normalizes_kitsu_records(
         "averageRating": "82.27",
         count_field: 26,
     }
-    payload = {"data": [{"type": resource, "attributes": attributes}]}
+    payload = {
+        "data": [
+            {
+                "type": resource,
+                "attributes": attributes,
+                "relationships": {
+                    "categories": {
+                        "data": [
+                            {"type": "categories", "id": "156"},
+                            {"type": "categories", "id": "25"},
+                            {"type": "categories", "id": "missing"},
+                        ]
+                    }
+                },
+            }
+        ],
+        "included": [
+            {
+                "type": "categories",
+                "id": "228",
+                "attributes": {"title": "Elements", "slug": "elements"},
+            },
+            {
+                "type": "categories",
+                "id": "156",
+                "attributes": {"title": "Fantasy", "slug": "fantasy"},
+                "relationships": {
+                    "parent": {"data": {"type": "categories", "id": "228"}}
+                },
+            },
+            {
+                "type": "categories",
+                "id": "25",
+                "attributes": {"title": "Magic", "slug": "magic"},
+                "relationships": {
+                    "parent": {"data": {"type": "categories", "id": "156"}}
+                },
+            },
+        ],
+    }
     session = SimpleNamespace(get=MagicMock(return_value=DummyResponse(payload)))
 
     payload = await kitsu.search_media(session, "Cowboy Bebop", media_type, 5)
@@ -63,11 +102,25 @@ async def test_search_media_normalizes_kitsu_records(
     assert result["bannerImage"] == "https://example.test/banner.jpg"
     assert result["averageScore"] == 82
     assert result[result_field] == 26
+    assert result["genres"] == ["Fantasy"]
     request = session.get.call_args
     assert request.args == (f"{kitsu.KITSU_URL}/{resource}",)
     assert request.kwargs["params"]["filter[text]"] == "Cowboy Bebop"
     assert count_field in request.kwargs["params"][f"fields[{resource}]"].split(",")
+    assert "categories" in request.kwargs["params"][f"fields[{resource}]"].split(",")
+    assert request.kwargs["params"]["include"] == "categories.parent"
+    assert request.kwargs["params"]["fields[categories]"] == "title,slug,parent"
     assert request.kwargs["timeout"].total == 10
+
+
+@pytest.mark.asyncio
+async def test_search_media_tolerates_missing_categories():
+    payload = {"data": [{"type": "anime", "attributes": {}}]}
+    session = SimpleNamespace(get=MagicMock(return_value=DummyResponse(payload)))
+
+    payload = await kitsu.search_media(session, "Berserk", "ANIME", 5)
+
+    assert payload["data"]["Page"]["media"][0]["genres"] == []
 
 
 @pytest.mark.asyncio
