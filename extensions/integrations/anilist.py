@@ -16,9 +16,9 @@ from discord import (
 from discord.ext import commands
 from discord.ui import Button, View, button
 
-# Kitsu owns fallback transport and errors; this module decides when to use it.
-from ._kitsu_fallback import KitsuError
-from ._kitsu_fallback import search_media as search_kitsu_media
+# Tenrai owns fallback transport and errors; this module decides when to use it.
+from ._tenrai_fallback import TenraiError
+from ._tenrai_fallback import search_media as search_tenrai_media
 
 if TYPE_CHECKING:
     from main import Sakamoto
@@ -217,13 +217,13 @@ async def _search_results(
             raise
         # This AniList search boundary owns the media-only, 403-only handoff.
         logger.warning(
-            "AniList %s search returned 403; using Kitsu", search_type.lower()
+            "AniList %s search returned 403; using Tenrai", search_type.lower()
         )
         try:
-            payload = await search_kitsu_media(session, query, search_type, limit)
-        except KitsuError as fallback_error:
+            payload = await search_tenrai_media(session, query, search_type, limit)
+        except TenraiError as fallback_error:
             logger.warning(
-                "Kitsu %s fallback failed with status %s",
+                "Tenrai %s fallback failed with status %s",
                 search_type.lower(),
                 fallback_error.status,
             )
@@ -337,11 +337,11 @@ def media_embed(
     if isinstance(banner_url, str):
         embed.set_image(url=banner_url)
     # The normalized provider marker controls attribution in the shared embed.
-    provider = "Kitsu" if media.get("_provider") == "Kitsu" else "AniList"
+    provider = "Tenrai" if media.get("_provider") == "Tenrai" else "AniList"
     author = f"{provider} • Cache Hit" if cached else provider
     embed.set_author(
         name=author,
-        url="https://kitsu.io/" if provider == "Kitsu" else "https://anilist.co/",
+        url="https://tenrai.org/" if provider == "Tenrai" else "https://anilist.co/",
     )
     return embed
 
