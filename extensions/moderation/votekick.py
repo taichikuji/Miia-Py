@@ -1,5 +1,5 @@
 import logging
-from asyncio import Lock, Task, create_task, current_task, sleep
+from asyncio import Task, create_task, sleep
 from os import makedirs, path
 from time import time
 from typing import TYPE_CHECKING
@@ -112,7 +112,7 @@ class VotekickView(View):
                     logger.error("Failed to move %s during votekick.", self.target)
 
                 if isinstance(cog := self.bot.get_cog("ModerationCog"), ModerationCog):
-                    await cog.ban_temporarily(self.target, original_channel, 60)
+                    await cog.ban_temporarily(self.target, original_channel)
 
     @button(label="No", style=ButtonStyle.red)
     async def no_button(self, interaction: Interaction, _button: Button):
@@ -133,8 +133,7 @@ class ModerationCog(commands.Cog):
     def __init__(self, bot: Sakamoto):
         self.bot = bot
         self.votekicks: dict[int, Message] = {}
-        self._ban_lock = Lock()
-        self._unban_tasks: dict[tuple[int, int], Task] = {}
+        self._unban_tasks: set[Task] = set()
 
     async def cog_load(self):
         makedirs(path.dirname(self.bot.db_path), exist_ok=True)
@@ -149,87 +148,70 @@ class ModerationCog(commands.Cog):
                 )
             """)
             await db.commit()
-        if self.bot.is_ready():
-            await self.on_ready()
+            async with db.execute("SELECT * FROM votekick_bans") as cursor:
+                pending_bans = await cursor.fetchall()
+
+        for row in pending_bans:
+            self._schedule_unban(*row)
 
     def cog_unload(self):
-        for task in self._unban_tasks.values():
+        for task in self._unban_tasks:
             task.cancel()
         self._unban_tasks.clear()
 
-    async def ban_temporarily(self, member: Member, channel, delay: int):
-        async with self._ban_lock, connect(self.bot.db_path) as db:
-            expires_at = time() + delay
-            overwrite = channel.overwrites_for(member)
-            # Commit recovery information before changing Discord permissions.
-            cursor = await db.execute(
-                """INSERT INTO votekick_bans VALUES (?, ?, ?, ?)
-                   ON CONFLICT(channel_id, member_id) DO UPDATE
-                   SET expires_at = excluded.expires_at RETURNING *""",
-                (channel.id, member.id, expires_at, overwrite.connect),
+    async def ban_temporarily(self, member: Member, channel):
+        expires_at = time() + 60
+        overwrite = channel.overwrites_for(member)
+        previous_connect = overwrite.connect
+        async with connect(self.bot.db_path) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO votekick_bans VALUES (?, ?, ?, ?)",
+                (channel.id, member.id, expires_at, previous_connect),
             )
-            row = await cursor.fetchone()
             await db.commit()
-            self._schedule_unban(*row)
-            overwrite.connect = False
-            await channel.set_permissions(member, overwrite=overwrite)
+        overwrite.connect = False
+        await channel.set_permissions(member, overwrite=overwrite)
+        self._schedule_unban(channel.id, member.id, expires_at, previous_connect)
 
     def _schedule_unban(self, channel_id, member_id, expires_at, previous_connect):
-        key = (channel_id, member_id)
-        if task := self._unban_tasks.get(key):
-            task.cancel()
-        self._unban_tasks[key] = create_task(
+        task = create_task(
             self.unban_after_delay(channel_id, member_id, expires_at, previous_connect)
         )
-
-    @commands.Cog.listener("on_shard_resumed")
-    @commands.Cog.listener()
-    async def on_ready(self, _shard_id=None):
-        async with (
-            self._ban_lock,
-            connect(self.bot.db_path) as db,
-            db.execute("SELECT * FROM votekick_bans") as cursor,
-        ):
-            for row in await cursor.fetchall():
-                self._schedule_unban(*row)
+        self._unban_tasks.add(task)
+        task.add_done_callback(self._unban_tasks.discard)
 
     async def unban_after_delay(
         self, channel_id, member_id, expires_at, previous_connect
     ):
-        """Attempt expiry once; failed records wait for startup or reconnect."""
-        key = (channel_id, member_id)
+        """Remove a persisted Temporary Rejoin Ban after its deadline."""
         try:
             await sleep(max(0, expires_at - time()))
             await self.bot.wait_until_ready()
-            async with self._ban_lock, connect(self.bot.db_path) as db:
-                try:
-                    channel = await self.bot.fetch_channel(channel_id)
-                    if channel.guild.unavailable:
-                        return
-                    member = channel.guild.get_member(member_id)
-                    if member is None:
-                        member = await self.bot.fetch_user(member_id)
-                    overwrite = channel.overwrites_for(member)
-                    if overwrite.connect is False:
-                        overwrite.connect = (
-                            None if previous_connect is None else bool(previous_connect)
-                        )
-                        await channel.set_permissions(
-                            member,
-                            overwrite=None if overwrite.is_empty() else overwrite,
-                        )
-                except NotFound:
-                    pass
+            try:
+                channel = await self.bot.fetch_channel(channel_id)
+                member = channel.guild.get_member(member_id)
+                if member is None:
+                    member = await self.bot.fetch_user(member_id)
+                overwrite = channel.overwrites_for(member)
+                if overwrite.connect is False:
+                    overwrite.connect = (
+                        None if previous_connect is None else bool(previous_connect)
+                    )
+                    await channel.set_permissions(
+                        member,
+                        overwrite=None if overwrite.is_empty() else overwrite,
+                    )
+            except NotFound:
+                pass
+
+            async with connect(self.bot.db_path) as db:
                 await db.execute(
                     "DELETE FROM votekick_bans WHERE channel_id = ? AND member_id = ?",
-                    key,
+                    (channel_id, member_id),
                 )
                 await db.commit()
         except Exception as error:
             logger.warning("Could not expire ban in %s: %s", channel_id, error)
-        finally:
-            if self._unban_tasks.get(key) is current_task():
-                self._unban_tasks.pop(key)
 
     @app_commands.command(
         name="votekick",

@@ -1,12 +1,12 @@
 import sys
-from asyncio import Event, gather, sleep
+from asyncio import gather
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiosqlite import connect
-from discord import HTTPException, PermissionOverwrite
+from discord import PermissionOverwrite
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -117,9 +117,7 @@ async def test_yes_button_successful_vote_kicks_target_and_records_ban(monkeypat
     assert all(button.disabled for button in view.children)
     assert embed.title == "Votekick Successful"
     target.move_to.assert_awaited_once_with(None, reason="Votekick successful.")
-    moderation_cog.ban_temporarily.assert_awaited_once_with(
-        target, original_channel, 60
-    )
+    moderation_cog.ban_temporarily.assert_awaited_once_with(target, original_channel)
 
 
 @pytest.mark.asyncio
@@ -206,33 +204,22 @@ async def test_votekick_command_happy_path_tracks_and_clears_state(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("previous_connect", [None, True, False])
-async def test_ban_reattaches_without_polling(tmp_path, monkeypatch, previous_connect):
+async def test_pending_ban_resumes_after_restart(tmp_path, monkeypatch):
     now = 1000
-    wake = Event()
-    delays = []
-
-    async def wait_for_expiry(delay):
-        delays.append(delay)
-        await wake.wait()
-
-    monkeypatch.setattr("extensions.moderation.votekick.sleep", wait_for_expiry)
     monkeypatch.setattr("extensions.moderation.votekick.time", lambda: now)
     member = DummyMember(22)
     channel = SimpleNamespace(
         id=33,
-        guild=SimpleNamespace(unavailable=False, get_member=lambda _: None),
+        guild=SimpleNamespace(get_member=lambda _: member),
         overwrites_for=MagicMock(
-            return_value=PermissionOverwrite(connect=previous_connect, speak=False)
+            return_value=PermissionOverwrite(connect=None, speak=False)
         ),
         set_permissions=AsyncMock(),
     )
     bot = SimpleNamespace(
         db_path=str(tmp_path / "bans.db"),
         wait_until_ready=AsyncMock(),
-        is_ready=lambda: False,
         fetch_channel=AsyncMock(return_value=channel),
-        fetch_user=AsyncMock(return_value=member),
     )
 
     async def rows():
@@ -242,51 +229,28 @@ async def test_ban_reattaches_without_polling(tmp_path, monkeypatch, previous_co
         ):
             return await cursor.fetchall()
 
-    async def apply_ban(*args, **kwargs):
-        assert await rows() == [(33, 22, now + 60, previous_connect)]
-        assert kwargs["overwrite"].connect is False
-        assert kwargs["overwrite"].speak is False
-
     first = ModerationCog(bot)
     await first.cog_load()
-    channel.set_permissions.side_effect = apply_ban
-    await first.ban_temporarily(member, channel, 60)
-    now = 1010
-    await first.ban_temporarily(member, channel, 60)
-    tasks = list(first._unban_tasks.values())
+    await first.ban_temporarily(member, channel)
+    assert await rows() == [(33, 22, 1060, None)]
+
+    tasks = list(first._unban_tasks)
     first.cog_unload()
     await gather(*tasks, return_exceptions=True)
-    assert first._unban_tasks == {}
+    assert first._unban_tasks == set()
 
-    restored = ModerationCog(bot)
-    now = 1069
-    bot.is_ready = lambda: True
-    await restored.cog_load()
-    await sleep(0)
-    assert delays[-1] == 1
-    bot.fetch_channel.assert_not_awaited()
-
-    now = 1071
-    channel.set_permissions.side_effect = HTTPException(
-        SimpleNamespace(status=503, reason="Unavailable"), ""
-    )
-    task = restored._unban_tasks[(33, 22)]
-    wake.set()
-    await task
-    assert len(await rows()) == 1
-    assert restored._unban_tasks == {}
-    bot.fetch_channel.assert_awaited_once()
-
-    # Discord still has the ban after the failed request.
+    now = 1060
+    wait_for_expiry = AsyncMock()
+    monkeypatch.setattr("extensions.moderation.votekick.sleep", wait_for_expiry)
     channel.overwrites_for.return_value = PermissionOverwrite(
         connect=False, speak=False
     )
-    channel.set_permissions.side_effect = None
-    await restored.on_ready(0)
-    await restored._unban_tasks[(33, 22)]
-    assert delays[-1] == 0
+    restored = ModerationCog(bot)
+    await restored.cog_load()
+    await gather(*list(restored._unban_tasks))
+
+    wait_for_expiry.assert_awaited_once_with(0)
     overwrite = channel.set_permissions.await_args.kwargs["overwrite"]
-    assert overwrite.connect is previous_connect
+    assert overwrite.connect is None
     assert overwrite.speak is False
     assert await rows() == []
-    restored.cog_unload()

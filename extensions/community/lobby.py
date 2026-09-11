@@ -6,7 +6,6 @@ from aiosqlite import connect
 from discord import (
     ButtonStyle,
     Embed,
-    HTTPException,
     Interaction,
     Member,
     NotFound,
@@ -168,27 +167,18 @@ class LobbyCog(
         ):
             self.active_channels = {row[0] async for row in cursor}
 
-    @commands.Cog.listener("on_shard_resumed")
     @commands.Cog.listener()
-    async def on_ready(self, _shard_id=None):
+    async def on_ready(self):
         await self._cleanup_ghost_lobbies()
 
     async def _cleanup_ghost_lobbies(self):
         ghost_ids: set[int] = set()
         empty_channels: list[VoiceChannel | StageChannel] = []
 
-        for channel_id in self.active_channels.copy():
+        for channel_id in self.active_channels:
             if (channel := self.bot.get_channel(channel_id)) is None:
-                try:
-                    channel = await self.bot.fetch_channel(channel_id)
-                except NotFound:
-                    ghost_ids.add(channel_id)
-                    continue
-                except HTTPException:
-                    continue
-            if channel.guild.unavailable:
-                continue
-            if (
+                ghost_ids.add(channel_id)
+            elif (
                 isinstance(channel, (VoiceChannel, StageChannel))
                 and not channel.members
             ):
@@ -201,8 +191,7 @@ class LobbyCog(
         if empty_channels:
             logger.info("Cleaning up %d empty lobby channel(s).", len(empty_channels))
             for channel in empty_channels:
-                if not channel.members:
-                    await self._delete_lobby(channel)
+                await self._delete_lobby(channel)
 
     async def _add_lobby_tracking(self, channel_id: int) -> None:
         async with connect(self.bot.db_path) as db:

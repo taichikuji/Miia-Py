@@ -34,9 +34,6 @@ class DummyBot:
         self.db_path = str(db_path)
         self.color = 0x123456
         self._channels: dict[int, object] = {}
-        self.fetch_channel = AsyncMock(
-            side_effect=NotFound(SimpleNamespace(status=404, reason="Not Found"), "")
-        )
 
     def get_channel(self, channel_id: int):
         return self._channels.get(channel_id)
@@ -191,12 +188,10 @@ async def test_cleanup_ghost_lobbies_reconciles_missing_empty_and_occupied(tmp_p
     empty_channel = Mock(spec=VoiceChannel)
     empty_channel.id = 22
     empty_channel.members = []
-    empty_channel.guild = SimpleNamespace(unavailable=False)
     empty_channel.delete = AsyncMock()
     occupied_channel = Mock(spec=VoiceChannel)
     occupied_channel.id = 33
     occupied_channel.members = [object()]
-    occupied_channel.guild = SimpleNamespace(unavailable=False)
     occupied_channel.delete = AsyncMock()
     bot._channels[22] = empty_channel
     bot._channels[33] = occupied_channel
@@ -230,10 +225,8 @@ async def test_cleanup_ghost_lobbies_routes_each_recovery_state(tmp_path):
     cog._delete_lobby = AsyncMock()
     empty_channel = Mock(spec=VoiceChannel)
     empty_channel.members = []
-    empty_channel.guild = SimpleNamespace(unavailable=False)
     occupied_channel = Mock(spec=VoiceChannel)
     occupied_channel.members = [object()]
-    occupied_channel.guild = SimpleNamespace(unavailable=False)
     bot._channels[22] = empty_channel
     bot._channels[33] = occupied_channel
 
@@ -378,45 +371,20 @@ async def test_cog_load_restores_generators_and_active_lobbies(tmp_path):
 
     restored_cog = LobbyCog(bot)
     await restored_cog.cog_load()
-    restored_cog.cog_unload()
 
     assert restored_cog.generators == {11: 22}
     assert restored_cog.active_channels == {33}
 
 
 @pytest.mark.asyncio
-async def test_on_ready_reconciles_lobbies_on_startup_and_reconnect(tmp_path):
+async def test_on_ready_reconciles_lobbies_after_each_ready_event(tmp_path):
     cog = LobbyCog(DummyBot(tmp_path / "lobby.db"))
     cog._cleanup_ghost_lobbies = AsyncMock()
 
     await cog.on_ready()
-    await cog.on_ready(0)
-
-    assert cog._cleanup_ghost_lobbies.await_count == 2
-
-
-@pytest.mark.asyncio
-async def test_cleanup_keeps_tracking_while_discord_is_unavailable(tmp_path):
-    from discord import Forbidden
-
-    bot = DummyBot(tmp_path / "lobby.db")
-    cog = LobbyCog(bot)
-    cog.active_channels = {11, 22}
-    cog._remove_lobby_tracking = AsyncMock()
-    cog._delete_lobby = AsyncMock()
-    bot.fetch_channel.side_effect = Forbidden(
-        SimpleNamespace(status=403, reason="Forbidden"), ""
-    )
-    channel = Mock(spec=VoiceChannel)
-    channel.guild = SimpleNamespace(unavailable=True)
-    channel.members = []
-    bot._channels[22] = channel
-
     await cog.on_ready()
 
-    cog._remove_lobby_tracking.assert_not_awaited()
-    cog._delete_lobby.assert_not_awaited()
-    assert cog.active_channels == {11, 22}
+    assert cog._cleanup_ghost_lobbies.await_count == 2
 
 
 def test_cog_unload_stops_and_forgets_all_control_views(tmp_path):
@@ -474,7 +442,7 @@ async def test_create_lobby_cleans_up_when_member_move_fails(tmp_path):
     await _init_test_db(cog)
     new_channel = SimpleNamespace(id=303, delete=AsyncMock(), send=AsyncMock())
     guild = SimpleNamespace(create_voice_channel=AsyncMock(return_value=new_channel))
-    member = Mock(
+    member = SimpleNamespace(
         guild=guild,
         display_name="Owner",
         mention="@Owner",
