@@ -23,6 +23,12 @@ Sakamoto is a voice-first Discord bot. Use the following terms consistently.
 - A user has zero or one Steam Link.
 - A successful Voice Votekick creates one Temporary Rejoin Ban for its target in that channel.
 
+## Restart recovery
+
+- Generator Channels and Temporary Lobby tracking reload from SQLite. Empty lobby cleanup runs on startup/reconnect and voice-state changes.
+- New Temporary Rejoin Bans persist their expiry and previous connect permission before applying the block. Each ban gets one expiry attempt; startup/reconnect reattaches pending bans using the saved deadline, so downtime counts toward the 60-second ban. Failed cleanup remains in SQLite until the next startup/reconnect; there is no periodic polling.
+- Keep `data/sakamoto.sqlite` across restarts. Unfinished votes and lobby control buttons are not restored; lobby owners retain Discord's native channel controls. Bans created before this recovery support cannot be recovered automatically.
+
 ## Music runtime behavior
 
 - yt-dlp resolves media outside the event loop; only compact playback metadata is cached, with a 256-entry cap and automatic expiry.
