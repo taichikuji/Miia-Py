@@ -52,11 +52,9 @@ See the [contribution guide](.github/CONTRIBUTING.md), [domain context](CONTEXT.
 
 Sakamoto stores UTC daily aggregate command counts so the Discord application owner can review usage with `/analytics`. The report defaults to 30 days and accepts a period from 1 to 90 days.
 
-Analytics covers AniList, Steam, music and radio, lobby, votekick, and clear commands. Administration and informational utilities such as analytics itself, sync, shutdown, extension loading, help, info, and ping are excluded. Redirect is a message listener rather than a command, so it is not tracked.
-
 The analytics table contains only the command's fully qualified name and its successful and failed invocation counts. It does not store user or server history, Discord IDs, command arguments or options, message content, search terms, URLs, IP data, or command error details. Direct-message interactions are ignored. Daily rows are permanently deleted after 90 days.
 
-For tracked feature commands, handled failures count as failed invocations whenever a command cannot complete the requested action, including invalid context or state, empty results, upstream service errors, queue limits, and immediate playback failures. Discord permission checks and uncaught command errors are captured through the same aggregate failure path.
+Every guild slash command completion and unhandled error is counted. Commands whose normal operation can end in a handled failure, such as an upstream service error or an immediate playback failure, additionally mark that outcome as failed instead of successful.
 
 ## Dependencies
 
