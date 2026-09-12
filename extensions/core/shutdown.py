@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from discord import Interaction, app_commands
 from discord.ext import commands
 
+from extensions.core.analytics import mark_app_command_failed
+
 if TYPE_CHECKING:
     from main import Sakamoto
 
@@ -30,6 +32,7 @@ class CloseCog(commands.Cog):
             await interaction.client.close()
         except Exception as e:
             logger.error("Failed to shut down the bot: %s", e)
+            mark_app_command_failed(interaction)
 
     @shutdown_bot.error
     async def on_shutdown_error(

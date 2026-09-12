@@ -76,3 +76,4 @@ async def test_show_help_reports_unknown_command_without_exposing_other_commands
     interaction.response.send_message.assert_awaited_once_with(
         ":x: Command `/missing command` not found.", ephemeral=True
     )
+    assert interaction.command_failed is True

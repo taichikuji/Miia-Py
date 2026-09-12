@@ -39,6 +39,7 @@ async def test_shutdown_logs_close_failure_without_raising(monkeypatch):
     await CloseCog.shutdown_bot.callback(CloseCog(SimpleNamespace()), interaction)
 
     logger.error.assert_called_once()
+    assert interaction.command_failed is True
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 from discord import Guild, HTTPException
 from discord.ext import commands
 
+from extensions.core.analytics import mark_app_command_failed
+
 if TYPE_CHECKING:
     from main import Sakamoto
 
@@ -16,17 +18,20 @@ class SyncCog(commands.Cog):
     def __init__(self, bot: Sakamoto):
         self.bot = bot
 
-    async def _sync_scope(self, guild: Guild | None = None) -> str:
+    async def _sync_scope(self, guild: Guild | None = None) -> tuple[str, bool]:
         """Sync commands for specific scope and return result message."""
         scope_name = f"guild {guild.id}" if guild else "globally"
         try:
             if count := len(await self.bot.tree.sync(guild=guild)):
-                return f"Synced {count} commands {scope_name}."
-            return f"No commands synced {scope_name}."
+                return f"Synced {count} commands {scope_name}.", True
+            return f"No commands synced {scope_name}.", True
         except HTTPException as e:
-            return f"Failed sync {scope_name}: {e.status} {getattr(e, 'text', '')}"
+            return (
+                f"Failed sync {scope_name}: {e.status} {getattr(e, 'text', '')}",
+                False,
+            )
         except Exception as e:
-            return f"Error sync {scope_name}: {e}"
+            return f"Error sync {scope_name}: {e}", False
 
     @commands.hybrid_command(
         name="sync",
@@ -38,17 +43,20 @@ class SyncCog(commands.Cog):
         if is_slash := ctx.interaction is not None:
             await ctx.defer(ephemeral=True)
 
-        global_msg = await self._sync_scope()
+        global_msg, global_succeeded = await self._sync_scope()
 
         if ctx.guild:
-            guild_msg = await self._sync_scope(ctx.guild)
+            guild_msg, guild_succeeded = await self._sync_scope(ctx.guild)
         else:
             guild_msg = "Skipped guild sync (not in server)."
+            guild_succeeded = True
 
         final_msg = f"{global_msg}\n{guild_msg}\n\n**Note:** Restart Discord client to see changes."
 
         if is_slash and ctx.interaction:
             await ctx.interaction.followup.send(final_msg, ephemeral=True)
+            if not global_succeeded or not guild_succeeded:
+                mark_app_command_failed(ctx.interaction)
         else:
             await ctx.send(final_msg)
 

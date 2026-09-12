@@ -41,13 +41,11 @@ def utc_today() -> date:
 
 def mark_app_command_failed(interaction: Interaction) -> None:
     """Record a handled command failure and suppress its completion event."""
-    if interaction.command_failed:
+    if getattr(interaction, "command_failed", False):
         return
     interaction.command_failed = True
-    if interaction.command is not None:
-        interaction.client.dispatch(
-            "app_command_failure", interaction, interaction.command
-        )
+    if (command := getattr(interaction, "command", None)) is not None:
+        interaction.client.dispatch("app_command_failure", interaction, command)
 
 
 async def is_application_owner(interaction: Interaction) -> bool:
