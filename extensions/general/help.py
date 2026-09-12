@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING
 from discord import Embed, Interaction, app_commands
 from discord.ext import commands
 
-from extensions.core.analytics import mark_app_command_failed
-
 if TYPE_CHECKING:
     from main import Sakamoto
 
@@ -106,7 +104,6 @@ class HelpCog(commands.Cog):
             await interaction.response.send_message(
                 f":x: Command `{command_name}` not found.", ephemeral=True
             )
-            mark_app_command_failed(interaction)
             return
 
         if isinstance(command, app_commands.Group):

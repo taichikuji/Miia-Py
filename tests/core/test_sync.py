@@ -25,7 +25,7 @@ async def test_sync_scope_returns_synced_message_for_non_empty_result():
 
     message = await cog._sync_scope()
 
-    assert message == ("Synced 3 commands globally.", True)
+    assert message == "Synced 3 commands globally."
 
 
 @pytest.mark.asyncio
@@ -36,7 +36,7 @@ async def test_sync_scope_returns_no_commands_message_for_empty_result():
 
     message = await cog._sync_scope(guild)
 
-    assert message == ("No commands synced guild 77.", True)
+    assert message == "No commands synced guild 77."
 
 
 @pytest.mark.asyncio
@@ -51,7 +51,7 @@ async def test_sync_scope_formats_http_exception(monkeypatch):
 
     message = await cog._sync_scope()
 
-    assert message == ("Failed sync globally: 429 rate limited", False)
+    assert message == "Failed sync globally: 429 rate limited"
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_sync_scope_formats_unexpected_exception():
 
     message = await cog._sync_scope()
 
-    assert message == ("Error sync globally: boom", False)
+    assert message == "Error sync globally: boom"
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_sync_command_uses_followup_for_slash_context():
         send=AsyncMock(),
     )
     cog = SyncCog(SimpleNamespace(tree=SimpleNamespace(sync=AsyncMock())))
-    cog._sync_scope = AsyncMock(side_effect=[("global ok", True), ("guild ok", True)])
+    cog._sync_scope = AsyncMock(side_effect=["global ok", "guild ok"])
 
     await SyncCog.sync.callback(cog, ctx)
 
@@ -97,7 +97,7 @@ async def test_sync_command_uses_ctx_send_for_non_slash_context():
         send=AsyncMock(),
     )
     cog = SyncCog(SimpleNamespace(tree=SimpleNamespace(sync=AsyncMock())))
-    cog._sync_scope = AsyncMock(return_value=("global only", True))
+    cog._sync_scope = AsyncMock(return_value="global only")
 
     await SyncCog.sync.callback(cog, ctx)
 
@@ -106,27 +106,6 @@ async def test_sync_command_uses_ctx_send_for_non_slash_context():
     ctx.send.assert_awaited_once_with(
         "global only\nSkipped guild sync (not in server).\n\n**Note:** Restart Discord client to see changes."
     )
-
-
-@pytest.mark.asyncio
-async def test_sync_command_marks_partial_slash_failure():
-    interaction = SimpleNamespace(
-        followup=SimpleNamespace(send=AsyncMock()), command_failed=False
-    )
-    ctx = SimpleNamespace(
-        interaction=interaction,
-        guild=SimpleNamespace(id=5),
-        defer=AsyncMock(),
-        send=AsyncMock(),
-    )
-    cog = SyncCog(SimpleNamespace(tree=SimpleNamespace(sync=AsyncMock())))
-    cog._sync_scope = AsyncMock(
-        side_effect=[("global failed", False), ("guild ok", True)]
-    )
-
-    await SyncCog.sync.callback(cog, ctx)
-
-    assert interaction.command_failed is True
 
 
 @pytest.mark.asyncio

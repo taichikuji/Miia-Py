@@ -12,9 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from extensions.core.analytics import (
     CREATE_TABLE_SQL,
     DELETE_EXPIRED_SQL,
+    DELETE_UNTRACKED_SQL,
+    TRACKED_COMMAND_ROOTS,
+    UNTRACKED_COMMAND_NAMES,
     UPSERT_SQL,
     AnalyticsCog,
     is_application_owner,
+    is_tracked_command,
     mark_app_command_failed,
 )
 
@@ -62,6 +66,46 @@ def test_retention_query_deletes_expired_daily_rows():
     ]
 
 
+def test_only_feature_command_roots_are_tracked():
+    assert TRACKED_COMMAND_ROOTS == {
+        "anilist",
+        "steam",
+        "play",
+        "stop",
+        "queue",
+        "skip",
+        "radio",
+        "lobby",
+        "votekick",
+        "clear",
+    }
+
+    for command_name in ("anilist anime", "steam lobby", "radio search", "lobby set"):
+        assert is_tracked_command(command_name) is True
+
+    for command_name in UNTRACKED_COMMAND_NAMES:
+        assert is_tracked_command(command_name) is False
+
+
+def test_existing_utility_command_rows_are_removed():
+    db = sqlite3.connect(":memory:")
+    db.execute(CREATE_TABLE_SQL)
+    db.executemany(
+        UPSERT_SQL,
+        [
+            ("2026-09-12", "analytics", 2, 0),
+            ("2026-09-12", "ping", 1, 0),
+            ("2026-09-12", "radio search", 3, 1),
+        ],
+    )
+
+    db.execute(DELETE_UNTRACKED_SQL, UNTRACKED_COMMAND_NAMES)
+
+    assert db.execute("SELECT command_name FROM command_analytics").fetchall() == [
+        ("radio search",)
+    ]
+
+
 def test_handled_failure_dispatches_once_and_suppresses_completion():
     interaction = SimpleNamespace(
         command_failed=False,
@@ -86,6 +130,9 @@ async def test_completion_and_failure_record_only_guild_command_name(tmp_path):
 
     await cog.on_app_command_completion(SimpleNamespace(guild_id=10), command)
     await cog.on_app_command_failure(SimpleNamespace(guild_id=10), command)
+    await cog.on_app_command_completion(
+        SimpleNamespace(guild_id=10), SimpleNamespace(qualified_name="analytics")
+    )
     await cog.on_app_command_completion(SimpleNamespace(guild_id=None), command)
 
     assert cog._record_safely.await_args_list[0].args == ("radio search",)
@@ -125,14 +172,13 @@ async def test_analytics_report_shows_usage_failures_and_unused_commands(tmp_pat
     bot = _bot(tmp_path)
     bot.tree.walk_commands = lambda: iter(
         [
+            app_commands.Command(name="play", description="Play", callback=callback),
+            app_commands.Command(name="skip", description="Skip", callback=callback),
             app_commands.Command(name="ping", description="Ping", callback=callback),
-            app_commands.Command(
-                name="unused", description="Unused", callback=callback
-            ),
         ]
     )
     cog = AnalyticsCog(bot)
-    cog._fetch_stats = AsyncMock(return_value=[("ping", 8, 2)])
+    cog._fetch_stats = AsyncMock(return_value=[("play", 8, 2), ("analytics", 20, 0)])
     interaction = SimpleNamespace(response=SimpleNamespace(send_message=AsyncMock()))
 
     await AnalyticsCog.analytics.callback(cog, interaction, 30)
@@ -142,7 +188,9 @@ async def test_analytics_report_shows_usage_failures_and_unused_commands(tmp_pat
     assert sent_embed.title == "Command Analytics — Last 30 Days"
     assert "2/8 fail/success" in fields["Most Used"]
     assert "20.0% failed" in fields["Highest Failure Rates"]
-    assert "`/unused`" in fields["Unused"]
+    assert "`/skip`" in fields["Unused"]
+    assert "/analytics" not in fields["Most Used"]
+    assert "/ping" not in fields["Unused"]
     interaction.response.send_message.assert_awaited_once_with(
         embed=sent_embed, ephemeral=True
     )

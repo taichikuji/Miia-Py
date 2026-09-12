@@ -47,7 +47,6 @@ async def test_loader_command_reports_unexpected_extension_error(monkeypatch):
         ":x: An unexpected error occurred: boom", ephemeral=True
     )
     logger.error.assert_called_once()
-    assert interaction.command_failed is True
 
 
 @pytest.mark.asyncio
