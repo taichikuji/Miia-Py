@@ -19,7 +19,7 @@ class SyncCog(commands.Cog):
         self.bot = bot
 
     async def _sync_scope(self, guild: Guild | None = None) -> tuple[str, bool]:
-        """Sync commands for specific scope and return result message."""
+        """Return the sync result message and whether the operation succeeded."""
         scope_name = f"guild {guild.id}" if guild else "globally"
         try:
             if count := len(await self.bot.tree.sync(guild=guild)):

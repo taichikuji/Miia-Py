@@ -41,6 +41,8 @@ def utc_today() -> date:
 
 def mark_app_command_failed(interaction: Interaction) -> None:
     """Record a handled command failure and suppress its completion event."""
+    # Handled errors never reach CommandTree.on_error. Set discord.py's flag to
+    # suppress its completion event, then dispatch the same aggregate failure path.
     if getattr(interaction, "command_failed", False):
         return
     interaction.command_failed = True

@@ -54,7 +54,7 @@ Sakamoto stores UTC daily aggregate command counts so the Discord application ow
 
 The analytics table contains only the command's fully qualified name and its successful and failed invocation counts. It does not store user or server history, Discord IDs, command arguments or options, message content, search terms, URLs, IP data, or command error details. Direct-message interactions are ignored. Daily rows are permanently deleted after 90 days.
 
-For audio commands, handled failures such as unmet voice requirements, source-resolution errors, full queues, and immediate playback failures count as failed invocations rather than successful command completions.
+Handled failures count as failed invocations whenever a command cannot complete the requested action, including invalid context or state, empty results, upstream service errors, queue limits, and immediate playback failures. Discord permission checks and uncaught command errors are captured through the same aggregate failure path.
 
 ## Dependencies
 
