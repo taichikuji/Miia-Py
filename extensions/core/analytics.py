@@ -14,33 +14,6 @@ logger = logging.getLogger(__name__)
 
 RETENTION_DAYS = 90
 DEFAULT_REPORT_DAYS = 30
-TRACKED_COMMAND_ROOTS = frozenset(
-    {
-        "anilist",
-        "steam",
-        "play",
-        "stop",
-        "queue",
-        "skip",
-        "radio",
-        "lobby",
-        "votekick",
-        "clear",
-    }
-)
-UNTRACKED_COMMAND_NAMES = (
-    "analytics",
-    "help",
-    "info",
-    "load",
-    "loader",
-    "ping",
-    "redirect",
-    "reload",
-    "shutdown",
-    "sync",
-    "unload",
-)
 
 CREATE_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS command_analytics (
@@ -60,19 +33,10 @@ UPSERT_SQL = """
         failure_count = failure_count + excluded.failure_count
 """
 DELETE_EXPIRED_SQL = "DELETE FROM command_analytics WHERE day < ?"
-DELETE_UNTRACKED_SQL = (
-    "DELETE FROM command_analytics WHERE command_name IN ("
-    + ", ".join("?" for _ in UNTRACKED_COMMAND_NAMES)
-    + ")"
-)
 
 
 def utc_today() -> date:
     return datetime.now(UTC).date()
-
-
-def is_tracked_command(command_name: str) -> bool:
-    return command_name.partition(" ")[0] in TRACKED_COMMAND_ROOTS
 
 
 def mark_app_command_failed(interaction: Interaction) -> None:
@@ -124,7 +88,6 @@ class AnalyticsCog(commands.Cog):
         makedirs(path.dirname(self.bot.db_path), exist_ok=True)
         async with connect(self.bot.db_path) as db:
             await db.execute(CREATE_TABLE_SQL)
-            await db.execute(DELETE_UNTRACKED_SQL, UNTRACKED_COMMAND_NAMES)
             await self._delete_expired(db)
             await db.commit()
         self.delete_expired_daily.start()
@@ -179,9 +142,7 @@ class AnalyticsCog(commands.Cog):
         interaction: Interaction,
         command: app_commands.Command | app_commands.ContextMenu,
     ) -> None:
-        if interaction.guild_id is not None and is_tracked_command(
-            command.qualified_name
-        ):
+        if interaction.guild_id is not None:
             await self._record_safely(command.qualified_name, succeeded=True)
 
     @commands.Cog.listener()
@@ -190,9 +151,7 @@ class AnalyticsCog(commands.Cog):
         interaction: Interaction,
         command: app_commands.Command | app_commands.ContextMenu,
     ) -> None:
-        if interaction.guild_id is not None and is_tracked_command(
-            command.qualified_name
-        ):
+        if interaction.guild_id is not None:
             await self._record_safely(command.qualified_name, succeeded=False)
 
     @tasks.loop(time=time(hour=0, tzinfo=UTC))
@@ -220,9 +179,7 @@ class AnalyticsCog(commands.Cog):
         days: app_commands.Range[int, 1, RETENTION_DAYS] = DEFAULT_REPORT_DAYS,
     ) -> None:
         """Show aggregate usage without identifying users or servers."""
-        rows = [
-            row for row in await self._fetch_stats(days) if is_tracked_command(row[0])
-        ]
+        rows = await self._fetch_stats(days)
         most_used = sorted(
             rows, key=lambda row: (row[1] + row[2], row[0]), reverse=True
         )
@@ -236,7 +193,6 @@ class AnalyticsCog(commands.Cog):
             command.qualified_name
             for command in self.bot.tree.walk_commands()
             if isinstance(command, app_commands.Command)
-            and is_tracked_command(command.qualified_name)
         }
         unused = sorted(command_names - used_names)
 
