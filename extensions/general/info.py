@@ -1,4 +1,5 @@
 import time
+from platform import machine, python_version, system
 from typing import TYPE_CHECKING
 
 from discord import Embed, Interaction, app_commands
@@ -26,10 +27,16 @@ class InfoCog(commands.Cog):
     def create_embed(self):
         """Build the bot information embed."""
         embed_data = {
-            "title": ":information_source: About Sakamoto",
-            "description": "A voice-first Discord bot for small-to-medium communities.",
+            "title": ":information_source: Bot's Info",
+            "description": "Here's some information about me and my dependencies!",
             "color": self.bot.color,
             "fields": [
+                {
+                    "name": "Runtime",
+                    "value": f"**Python**: {python_version()}",
+                    "inline": True,
+                },
+                {"name": "OS", "value": f"**{system()}**: {machine()}", "inline": True},
                 {
                     "name": "Uptime",
                     "value": self.uptime(),
