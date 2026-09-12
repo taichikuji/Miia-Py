@@ -4,7 +4,7 @@ from os import environ
 from pathlib import Path
 
 from aiohttp import ClientSession
-from discord import Activity, ActivityType, Intents, Interaction, app_commands
+from discord import Activity, ActivityType, Intents, Interaction, Message, app_commands
 from discord.ext import commands
 from discord.utils import setup_logging
 
@@ -16,7 +16,18 @@ if not (TOKEN := environ.get("TOKEN")):
 
 
 class SakamotoCommandTree(app_commands.CommandTree):
-    """Dispatch app-command failures without delaying their error handlers."""
+    """Keep app commands guild-only and dispatch failures without delay."""
+
+    def __init__(self, client):
+        super().__init__(
+            client,
+            allowed_contexts=app_commands.AppCommandContext(
+                guild=True, dm_channel=False, private_channel=False
+            ),
+        )
+
+    async def interaction_check(self, interaction: Interaction, /) -> bool:
+        return interaction.guild_id is not None
 
     async def on_error(
         self, interaction: Interaction, error: app_commands.AppCommandError, /
@@ -68,6 +79,10 @@ class Sakamoto(commands.Bot):
         )
         await self.change_presence(activity=display)
         logger.info("I am online! - %s %s", self.user.name, self.user.id)
+
+    async def on_message(self, message: Message) -> None:
+        if message.guild is not None:
+            await self.process_commands(message)
 
     async def close(self):
         if self.session:
