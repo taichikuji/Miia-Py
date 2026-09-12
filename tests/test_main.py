@@ -28,6 +28,7 @@ def test_bot_initializes_shared_resources(monkeypatch, main_module):
     assert bot.color == 0xFF3351
     assert bot.db_path == "data/sakamoto.sqlite"
     assert bot.intents.message_content is True
+    assert bot.help_command is None
     assert isinstance(bot.tree, main_module.SakamotoCommandTree)
     assert bot.tree.allowed_contexts.guild is True
     assert bot.tree.allowed_contexts.dm_channel is False
@@ -40,18 +41,6 @@ async def test_command_tree_accepts_guilds_and_silently_rejects_dms(main_module)
 
     assert await tree.interaction_check(SimpleNamespace(guild_id=123)) is True
     assert await tree.interaction_check(SimpleNamespace(guild_id=None)) is False
-
-
-@pytest.mark.asyncio
-async def test_bot_processes_only_guild_messages(main_module):
-    bot = main_module.Sakamoto()
-    bot.process_commands = AsyncMock()
-    guild_message = SimpleNamespace(guild=object())
-
-    await bot.on_message(SimpleNamespace(guild=None))
-    await bot.on_message(guild_message)
-
-    bot.process_commands.assert_awaited_once_with(guild_message)
 
 
 @pytest.mark.asyncio

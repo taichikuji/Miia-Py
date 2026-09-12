@@ -4,7 +4,7 @@ from os import environ
 from pathlib import Path
 
 from aiohttp import ClientSession
-from discord import Activity, ActivityType, Intents, Interaction, Message, app_commands
+from discord import Activity, ActivityType, Intents, Interaction, app_commands
 from discord.ext import commands
 from discord.utils import setup_logging
 
@@ -16,15 +16,7 @@ if not (TOKEN := environ.get("TOKEN")):
 
 
 class SakamotoCommandTree(app_commands.CommandTree):
-    """Keep app commands guild-only and dispatch failures without delay."""
-
-    def __init__(self, client):
-        super().__init__(
-            client,
-            allowed_contexts=app_commands.AppCommandContext(
-                guild=True, dm_channel=False, private_channel=False
-            ),
-        )
+    """Reject DM interactions and dispatch failures without delay."""
 
     async def interaction_check(self, interaction: Interaction, /) -> bool:
         return interaction.guild_id is not None
@@ -32,10 +24,8 @@ class SakamotoCommandTree(app_commands.CommandTree):
     async def on_error(
         self, interaction: Interaction, error: app_commands.AppCommandError, /
     ) -> None:
-        if interaction.command is not None:
-            self.client.dispatch(
-                "app_command_failure", interaction, interaction.command
-            )
+        if command := interaction.command:
+            self.client.dispatch("app_command_failure", interaction, command)
         await super().on_error(interaction, error)
 
 
@@ -49,6 +39,8 @@ class Sakamoto(commands.Bot):
             description="You thought all I say is meow?",
             command_prefix=commands.when_mentioned,
             case_insensitive=True,
+            help_command=None,
+            allowed_contexts=app_commands.AppCommandContext(guild=True),
             intents=intents,
             tree_cls=SakamotoCommandTree,
         )
@@ -80,10 +72,6 @@ class Sakamoto(commands.Bot):
         await self.change_presence(activity=display)
         logger.info("I am online! - %s %s", self.user.name, self.user.id)
 
-    async def on_message(self, message: Message) -> None:
-        if message.guild is not None:
-            await self.process_commands(message)
-
     async def close(self):
         if self.session:
             await self.session.close()
@@ -93,4 +81,4 @@ class Sakamoto(commands.Bot):
 
 if __name__ == "__main__":
     logger.info("Starting Sakamoto...")
-    Sakamoto().run(TOKEN, reconnect=True, log_handler=None)
+    Sakamoto().run(TOKEN, log_handler=None)
