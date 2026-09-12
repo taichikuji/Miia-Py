@@ -15,6 +15,7 @@ from extensions.core.analytics import (
     UPSERT_SQL,
     AnalyticsCog,
     is_application_owner,
+    mark_app_command_failed,
 )
 
 
@@ -59,6 +60,22 @@ def test_retention_query_deletes_expired_daily_rows():
     assert db.execute("SELECT day FROM command_analytics").fetchall() == [
         ("2026-06-15",)
     ]
+
+
+def test_handled_failure_dispatches_once_and_suppresses_completion():
+    interaction = SimpleNamespace(
+        command_failed=False,
+        command=object(),
+        client=SimpleNamespace(dispatch=MagicMock()),
+    )
+
+    mark_app_command_failed(interaction)
+    mark_app_command_failed(interaction)
+
+    assert interaction.command_failed is True
+    interaction.client.dispatch.assert_called_once_with(
+        "app_command_failure", interaction, interaction.command
+    )
 
 
 @pytest.mark.asyncio

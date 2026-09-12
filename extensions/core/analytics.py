@@ -39,6 +39,17 @@ def utc_today() -> date:
     return datetime.now(UTC).date()
 
 
+def mark_app_command_failed(interaction: Interaction) -> None:
+    """Record a handled command failure and suppress its completion event."""
+    if interaction.command_failed:
+        return
+    interaction.command_failed = True
+    if interaction.command is not None:
+        interaction.client.dispatch(
+            "app_command_failure", interaction, interaction.command
+        )
+
+
 async def is_application_owner(interaction: Interaction) -> bool:
     """Allow only the owner of the Discord application."""
     return await interaction.client.is_owner(interaction.user)  # type: ignore[attr-defined]
